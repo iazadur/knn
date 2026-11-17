@@ -2,7 +2,7 @@
 
 **Topic:** *Image Recognition: Classifying Images Based on Nearby Feature Representations*  
 **Course Teacher:** **Ahsan Ullah**, Assistant Professor, Dept. of CSE, World University of Bangladesh  
-**Slides:** [`KNN_Image_Recognition_Presentation.html`](KNN_Image_Recognition_Presentation.html) (14 Slides)  
+**Slides:** [`index.html`](index.html) (14 Slides)  
 **Colab Notebook:** [`KNN_Image_Recognition_Colab.ipynb`](KNN_Image_Recognition_Colab.ipynb)
 
 ---
@@ -242,7 +242,7 @@
 
 ## 5. Five Pro-Tips for Delivering a Top-Tier Classroom Presentation
 
-1. **Press `F` for Fullscreen:** Open [`KNN_Image_Recognition_Presentation.html`](KNN_Image_Recognition_Presentation.html) in Chrome/Edge and press **`F`** before starting. Use **`→`** or **`Space`** to advance slides smoothly.
+1. **Press `F` for Fullscreen:** Open [`index.html`](index.html) in Chrome/Edge and press **`F`** before starting. Use **`→`** or **`Space`** to advance slides smoothly.
 2. **Don't Read Word-for-Word:** Keep eye contact with Ahsan Ullah Sir and your classmates; use the slides as visual anchors while speaking naturally.
 3. **Demo Slide 12 Live:** Make sure Aduri clicks **K = 1**, **K = 3**, and **K = 5** live on Slide 12—seeing the circle resize dynamically immediately grabs attention.
 4. **Smooth Transitions:** Stick to the handover lines (`Azad → Rakib → Aduri → Azad's Colab Demo`) so the presentation feels like one cohesive team effort.
