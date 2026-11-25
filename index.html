@@ -3,29 +3,27 @@
 <head>
   <meta charset="UTF-8" />
   <meta name="viewport" content="width=device-width, initial-scale=1.0" />
-  <title>KNN in Image Recognition — Classifying Images Based on Nearby Feature Representations</title>
+  <title>Image Recognition: Classifying Images Based on Nearby Feature Representations</title>
   <style>
     :root {
-      --bg-page: #0f172a;
-      --bg-slide: #ffffff;
-      --bg-muted: #f8fafc;
-      --bg-tint-blue: #eff6ff;
-      --bg-tint-amber: #fffbeb;
-      --bg-tint-emerald: #ecfdf5;
-      --bg-tint-rose: #fff1f2;
-      --bg-tint-indigo: #eef2ff;
-      --text-main: #0f172a;
-      --text-secondary: #334155;
-      --text-muted: #64748b;
-      --primary: #1d4ed8;
-      --primary-light: #3b82f6;
-      --accent: #0284c7;
-      --amber: #d97706;
-      --emerald: #059669;
-      --rose: #e11d48;
-      --border: #e2e8f0;
-      --shadow-slide: 0 25px 50px -12px rgba(0, 0, 0, 0.55);
-      --radius: 14px;
+      --bg-void: #050811;
+      --bg-stage: #0b1120;
+      --bg-card: rgba(17, 25, 44, 0.86);
+      --bg-card-alt: rgba(23, 34, 59, 0.72);
+      --border-subtle: rgba(148, 163, 184, 0.16);
+      --border-glow: rgba(56, 189, 248, 0.42);
+      --text-primary: #f8fafc;
+      --text-secondary: #cbd5e1;
+      --text-muted: #94a3b8;
+      --cyan: #38bdf8;
+      --blue: #3b82f6;
+      --indigo: #818cf8;
+      --emerald: #34d399;
+      --amber: #fbbf24;
+      --rose: #fb7185;
+      --purple: #c084fc;
+      --font-sans: "Inter", -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif;
+      --font-mono: "JetBrains Mono", "Fira Code", Consolas, monospace;
     }
 
     * {
@@ -34,1555 +32,1607 @@
       padding: 0;
     }
 
-    body {
-      font-family: "Inter", -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, Oxygen, Ubuntu, Cantarell, sans-serif;
-      background: radial-gradient(circle at top right, #1e293b 0%, #0f172a 65%);
-      color: var(--text-main);
-      min-height: 100vh;
+    html, body {
+      width: 100%;
+      height: 100%;
+      background: radial-gradient(circle at 18% 12%, #13203d 0%, var(--bg-void) 62%);
+      color: var(--text-primary);
+      font-family: var(--font-sans);
+      overflow: hidden;
+      user-select: none;
+    }
+
+    .app-shell {
+      width: 100vw;
+      height: 100vh;
       display: flex;
       flex-direction: column;
       align-items: center;
       justify-content: center;
-      padding: 16px 20px 76px;
-      overflow-x: hidden;
+      padding: 12px 18px 62px;
+      position: relative;
     }
 
-    /* Progress bar at top */
-    .progress-track {
+    /* Top Progress Bar */
+    .progress-bar-track {
       position: fixed;
       top: 0;
       left: 0;
-      width: 100%;
-      height: 5px;
-      background: rgba(255, 255, 255, 0.12);
-      z-index: 100;
+      right: 0;
+      height: 4px;
+      background: rgba(148, 163, 184, 0.14);
+      z-index: 60;
     }
 
-    .progress-fill {
+    .progress-bar-fill {
       height: 100%;
-      background: linear-gradient(90deg, #38bdf8, #3b82f6, #818cf8);
-      width: 7.14%;
-      transition: width 0.35s ease;
+      width: 5.88%;
+      background: linear-gradient(90deg, var(--cyan), var(--indigo), var(--emerald));
+      box-shadow: 0 0 12px rgba(56, 189, 248, 0.65);
+      transition: width 0.3s cubic-bezier(0.22, 1, 0.36, 1);
     }
 
-    /* Main Slide Deck Stage */
-    .deck-stage {
-      width: 100%;
-      max-width: 1160px;
+    /* 16:9 Presentation Stage */
+    .stage-wrapper {
+      width: min(95vw, calc((100vh - 82px) * 16 / 9));
+      aspect-ratio: 16 / 9;
+      background: linear-gradient(145deg, #0d1528 0%, #090e1c 100%);
+      border: 1px solid var(--border-subtle);
+      border-radius: 18px;
+      box-shadow: 0 28px 70px rgba(0, 0, 0, 0.72), inset 0 1px 0 rgba(255, 255, 255, 0.06);
       position: relative;
+      overflow: hidden;
+      display: flex;
+    }
+
+    /* Subtle Tech Grid Overlay */
+    .stage-wrapper::before {
+      content: "";
+      position: absolute;
+      inset: 0;
+      background-image:
+        linear-gradient(rgba(148, 163, 184, 0.03) 1px, transparent 1px),
+        linear-gradient(90deg, rgba(148, 163, 184, 0.03) 1px, transparent 1px);
+      background-size: 36px 36px;
+      pointer-events: none;
+      z-index: 0;
     }
 
     .slide {
       display: none;
-      background: var(--bg-slide);
-      border-radius: 18px;
-      box-shadow: var(--shadow-slide);
-      min-height: 640px;
-      padding: 42px 52px 38px;
+      width: 100%;
+      height: 100%;
+      padding: clamp(22px, 3vw, 40px) clamp(28px, 3.8vw, 52px) clamp(18px, 2.4vw, 30px);
       flex-direction: column;
       justify-content: space-between;
       position: relative;
-      overflow: hidden;
-      animation: fadeSlideIn 0.28s ease-out;
+      z-index: 1;
+      animation: slideEnter 0.28s ease-out;
     }
 
     .slide.active {
       display: flex;
     }
 
-    @keyframes fadeSlideIn {
-      from {
-        opacity: 0;
-        transform: translateY(8px);
-      }
-      to {
-        opacity: 1;
-        transform: translateY(0);
-      }
+    @keyframes slideEnter {
+      from { opacity: 0; transform: translateY(8px) scale(0.995); }
+      to   { opacity: 1; transform: translateY(0) scale(1); }
     }
 
-    /* Top accent strip on content slides */
-    .slide::before {
-      content: "";
-      position: absolute;
-      top: 0;
-      left: 0;
-      right: 0;
-      height: 6px;
-      background: linear-gradient(90deg, #1d4ed8, #0284c7, #6366f1);
-    }
-
-    /* Hero / Dark Slides */
-    .slide.slide-hero {
-      background: linear-gradient(135deg, #0f172a 0%, #1e3a8a 58%, #0c4a6e 100%);
-      color: #ffffff;
-      justify-content: center;
-    }
-
-    .slide.slide-hero::before {
-      background: linear-gradient(90deg, #38bdf8, #818cf8, #f59e0b);
-    }
-
+    /* Slide Header */
     .slide-header {
       display: flex;
       justify-content: space-between;
       align-items: flex-start;
-      border-bottom: 2px solid var(--border);
-      padding-bottom: 14px;
-      margin-bottom: 22px;
       gap: 16px;
+      padding-bottom: 12px;
+      border-bottom: 1px solid var(--border-subtle);
     }
 
-    .slide-kicker {
-      font-size: 0.78rem;
+    .kicker {
+      font-size: clamp(0.68rem, 0.9vw, 0.8rem);
       font-weight: 700;
+      letter-spacing: 0.11em;
       text-transform: uppercase;
-      letter-spacing: 0.08em;
-      color: var(--primary);
+      color: var(--cyan);
       margin-bottom: 4px;
     }
 
     .slide-title {
-      font-size: 1.85rem;
+      font-size: clamp(1.3rem, 2.05vw, 1.95rem);
       font-weight: 800;
-      color: var(--text-main);
-      line-height: 1.2;
+      line-height: 1.18;
+      letter-spacing: -0.02em;
+      color: var(--text-primary);
     }
 
-    .slide-badge {
-      background: var(--bg-tint-blue);
-      color: var(--primary);
-      border: 1px solid #bfdbfe;
-      padding: 6px 12px;
+    .tag-pill {
+      padding: 5px 12px;
       border-radius: 999px;
-      font-size: 0.78rem;
+      font-size: clamp(0.68rem, 0.85vw, 0.78rem);
       font-weight: 700;
+      background: rgba(56, 189, 248, 0.12);
+      border: 1px solid rgba(56, 189, 248, 0.35);
+      color: var(--cyan);
       white-space: nowrap;
     }
 
-    .slide-body {
+    /* Slide Content Area */
+    .slide-content {
       flex: 1;
       display: flex;
       flex-direction: column;
       justify-content: center;
-      gap: 18px;
+      gap: clamp(12px, 1.5vw, 18px);
+      padding: 10px 0;
+      min-height: 0;
     }
 
-    .slide-footer {
-      display: flex;
-      justify-content: space-between;
-      align-items: center;
-      margin-top: 20px;
-      padding-top: 12px;
-      border-top: 1px solid var(--border);
-      font-size: 0.8rem;
-      color: var(--text-muted);
-    }
-
-    .slide-hero .slide-footer {
-      position: absolute;
-      bottom: 24px;
-      left: 52px;
-      right: 52px;
-      border-top: 1px solid rgba(255, 255, 255, 0.16);
-      color: #cbd5e1;
-    }
-
-    /* Typography & Layout helpers */
+    /* Grids & Cards */
     .grid-2 {
       display: grid;
       grid-template-columns: 1fr 1fr;
-      gap: 24px;
+      gap: clamp(14px, 1.8vw, 22px);
       align-items: stretch;
     }
 
-    .grid-2-weighted {
+    .grid-2-wide {
       display: grid;
-      grid-template-columns: 1.15fr 0.85fr;
-      gap: 26px;
-      align-items: center;
+      grid-template-columns: 1.12fr 0.88fr;
+      gap: clamp(14px, 1.8vw, 22px);
+      align-items: stretch;
     }
 
     .grid-3 {
       display: grid;
       grid-template-columns: repeat(3, 1fr);
-      gap: 18px;
+      gap: clamp(12px, 1.5vw, 18px);
+      align-items: stretch;
+    }
+
+    .grid-4 {
+      display: grid;
+      grid-template-columns: repeat(4, 1fr);
+      gap: clamp(10px, 1.3vw, 15px);
+      align-items: stretch;
     }
 
     .card {
-      background: var(--bg-muted);
-      border: 1px solid var(--border);
-      border-radius: var(--radius);
-      padding: 18px 20px;
-    }
-
-    .card-blue {
-      background: var(--bg-tint-blue);
-      border-color: #bfdbfe;
-    }
-
-    .card-amber {
-      background: var(--bg-tint-amber);
-      border-color: #fde68a;
-    }
-
-    .card-emerald {
-      background: var(--bg-tint-emerald);
-      border-color: #a7f3d0;
-    }
-
-    .card-rose {
-      background: var(--bg-tint-rose);
-      border-color: #fecdd3;
-    }
-
-    .card-indigo {
-      background: var(--bg-tint-indigo);
-      border-color: #c7d2fe;
-    }
-
-    .card h3 {
-      font-size: 1.05rem;
-      font-weight: 700;
-      margin-bottom: 8px;
-      color: var(--text-main);
-    }
-
-    .card p, .card li {
-      font-size: 0.94rem;
-      line-height: 1.55;
-      color: var(--text-secondary);
-    }
-
-    .lead-text {
-      font-size: 1.05rem;
-      line-height: 1.6;
-      color: var(--text-secondary);
-    }
-
-    /* Lists */
-    .styled-list {
-      list-style: none;
+      background: var(--bg-card);
+      border: 1px solid var(--border-subtle);
+      border-radius: 14px;
+      padding: clamp(13px, 1.6vw, 20px);
       display: flex;
       flex-direction: column;
-      gap: 10px;
+      gap: 8px;
+      backdrop-filter: blur(8px);
     }
 
-    .styled-list li {
+    .card-cyan    { border-top: 3px solid var(--cyan); }
+    .card-indigo  { border-top: 3px solid var(--indigo); }
+    .card-emerald { border-top: 3px solid var(--emerald); }
+    .card-amber   { border-top: 3px solid var(--amber); }
+    .card-rose    { border-top: 3px solid var(--rose); }
+    .card-purple  { border-top: 3px solid var(--purple); }
+
+    .card h3 {
+      font-size: clamp(0.92rem, 1.2vw, 1.12rem);
+      font-weight: 700;
+      color: var(--text-primary);
       display: flex;
-      align-items: flex-start;
-      gap: 10px;
-      font-size: 0.96rem;
-      line-height: 1.5;
-      color: var(--text-secondary);
-    }
-
-    .bullet-num {
-      display: inline-flex;
-      align-items: center;
-      justify-content: center;
-      min-width: 24px;
-      height: 24px;
-      border-radius: 50%;
-      background: var(--primary);
-      color: #ffffff;
-      font-size: 0.78rem;
-      font-weight: 700;
-      margin-top: 2px;
-    }
-
-    /* Tables */
-    table.data-table {
-      width: 100%;
-      border-collapse: collapse;
-      font-size: 0.92rem;
-      border-radius: 10px;
-      overflow: hidden;
-      border: 1px solid var(--border);
-    }
-
-    table.data-table th {
-      background: #1e293b;
-      color: #ffffff;
-      text-align: left;
-      padding: 11px 14px;
-      font-weight: 700;
-      font-size: 0.85rem;
-      letter-spacing: 0.02em;
-    }
-
-    table.data-table td {
-      padding: 10px 14px;
-      border-bottom: 1px solid var(--border);
-      color: var(--text-secondary);
-    }
-
-    table.data-table tr:nth-child(even) td {
-      background: #f8fafc;
-    }
-
-    table.data-table tr.row-highlight td {
-      background: #ecfdf5;
-      font-weight: 600;
-      color: #065f46;
-    }
-
-    table.data-table tr.row-highlight-blue td {
-      background: #eff6ff;
-      font-weight: 600;
-      color: #1e40af;
-    }
-
-    /* Math & Code blocks */
-    .math-box {
-      background: #f1f5f9;
-      border-left: 4px solid var(--primary);
-      border-radius: 8px;
-      padding: 14px 18px;
-      font-family: "Cambria Math", "Times New Roman", Georgia, serif;
-      font-size: 1.15rem;
-      color: #0f172a;
-      text-align: center;
-    }
-
-    pre.code-block {
-      background: #0f172a;
-      color: #e2e8f0;
-      border-radius: 12px;
-      padding: 18px 20px;
-      font-family: "JetBrains Mono", "Fira Code", Consolas, monospace;
-      font-size: 0.83rem;
-      line-height: 1.55;
-      overflow-x: auto;
-      border: 1px solid #334155;
-    }
-
-    .kw { color: #93c5fd; font-weight: 600; }
-    .fn { color: #fde68a; }
-    .str { color: #86efac; }
-    .cm { color: #94a3b8; font-style: italic; }
-    .num { color: #fca5a5; }
-
-    /* Tags & Pills */
-    .pill {
-      display: inline-block;
-      padding: 3px 10px;
-      border-radius: 999px;
-      font-size: 0.78rem;
-      font-weight: 700;
-    }
-    .pill-blue { background: #dbeafe; color: #1e40af; }
-    .pill-amber { background: #fef3c7; color: #92400e; }
-    .pill-emerald { background: #d1fae5; color: #065f46; }
-    .pill-rose { background: #ffe4e6; color: #9f1239; }
-
-    /* Pipeline visualization (Slide 3) */
-    .pipeline-flow {
-      display: grid;
-      grid-template-columns: 1.1fr 30px 1fr 30px 1.15fr 30px 1fr;
       align-items: center;
       gap: 8px;
     }
 
-    .pipe-step {
-      background: #ffffff;
-      border: 2px solid #cbd5e1;
-      border-radius: 12px;
-      padding: 14px;
-      text-align: center;
-      min-height: 185px;
+    .card p, .card li {
+      font-size: clamp(0.78rem, 0.98vw, 0.92rem);
+      line-height: 1.5;
+      color: var(--text-secondary);
+    }
+
+    .clean-list {
+      list-style: none;
       display: flex;
       flex-direction: column;
-      justify-content: center;
-      align-items: center;
-      gap: 10px;
+      gap: 7px;
     }
 
-    .pipe-arrow {
-      font-size: 1.6rem;
-      font-weight: 800;
-      color: var(--primary);
-      text-align: center;
+    .clean-list li {
+      padding-left: 16px;
+      position: relative;
     }
 
-    .pixel-grid {
-      display: grid;
-      grid-template-columns: repeat(5, 18px);
-      gap: 2px;
-      padding: 4px;
-      background: #e2e8f0;
-      border-radius: 6px;
-    }
-
-    .px {
-      width: 18px;
-      height: 18px;
-      border-radius: 2px;
-      font-size: 9px;
-      display: flex;
-      align-items: center;
-      justify-content: center;
+    .clean-list li::before {
+      content: "▸";
+      position: absolute;
+      left: 0;
+      color: var(--cyan);
       font-weight: 700;
     }
 
-    .vector-chip {
-      font-family: monospace;
-      font-size: 0.82rem;
-      background: #eff6ff;
-      border: 1px solid #93c5fd;
-      color: #1e3a8a;
-      padding: 8px 10px;
-      border-radius: 8px;
-      line-height: 1.4;
+    .callout {
+      background: linear-gradient(90deg, rgba(56, 189, 248, 0.11), rgba(129, 140, 248, 0.08));
+      border-left: 3px solid var(--cyan);
+      border-radius: 10px;
+      padding: 10px 15px;
+      font-size: clamp(0.78rem, 0.96vw, 0.9rem);
+      color: var(--text-secondary);
+      line-height: 1.45;
     }
 
-    /* Interactive K Simulator Buttons (Slide 12) */
+    .callout-amber {
+      background: rgba(251, 191, 36, 0.09);
+      border-left-color: var(--amber);
+    }
+
+    .callout-emerald {
+      background: rgba(52, 211, 153, 0.09);
+      border-left-color: var(--emerald);
+    }
+
+    /* Math & Code Blocks */
+    .math-box {
+      background: rgba(5, 8, 17, 0.72);
+      border: 1px solid rgba(129, 140, 248, 0.32);
+      border-radius: 10px;
+      padding: 10px 14px;
+      font-family: var(--font-mono);
+      font-size: clamp(0.8rem, 1.05vw, 0.98rem);
+      color: #e0e7ff;
+      text-align: center;
+      letter-spacing: 0.01em;
+    }
+
+    code, .mono {
+      font-family: var(--font-mono);
+      background: rgba(148, 163, 184, 0.15);
+      padding: 1px 6px;
+      border-radius: 5px;
+      font-size: 0.9em;
+      color: #bae6fd;
+    }
+
+    /* Tables */
+    .data-table {
+      width: 100%;
+      border-collapse: collapse;
+      font-size: clamp(0.74rem, 0.92vw, 0.87rem);
+    }
+
+    .data-table th, .data-table td {
+      padding: 7px 10px;
+      border-bottom: 1px solid var(--border-subtle);
+      text-align: left;
+    }
+
+    .data-table th {
+      color: var(--cyan);
+      font-weight: 700;
+      font-size: 0.82em;
+      text-transform: uppercase;
+      letter-spacing: 0.05em;
+      background: rgba(15, 23, 42, 0.65);
+    }
+
+    .data-table tr.highlight-row {
+      background: rgba(52, 211, 153, 0.11);
+    }
+
+    /* Pixel Matrix Mini Grid */
+    .pixel-matrix-8 {
+      display: grid;
+      grid-template-columns: repeat(8, 1fr);
+      gap: 2px;
+      width: min(215px, 19vw);
+      aspect-ratio: 1 / 1;
+      margin: 0 auto;
+      background: #050811;
+      padding: 4px;
+      border-radius: 8px;
+      border: 1px solid var(--border-subtle);
+    }
+
+    .px-cell {
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      font-family: var(--font-mono);
+      font-size: clamp(0.55rem, 0.72vw, 0.68rem);
+      font-weight: 700;
+      border-radius: 2px;
+    }
+
+    /* Interactive Buttons on Slide 11 */
     .k-btn-group {
       display: flex;
-      gap: 10px;
-      margin-bottom: 12px;
+      gap: 8px;
+      flex-wrap: wrap;
     }
 
     .k-btn {
-      flex: 1;
-      padding: 10px 14px;
-      border: 2px solid #cbd5e1;
-      background: #ffffff;
-      color: var(--text-main);
+      background: rgba(30, 41, 59, 0.85);
+      border: 1px solid var(--border-subtle);
+      color: var(--text-secondary);
+      padding: 6px 13px;
+      border-radius: 8px;
+      font-family: var(--font-sans);
+      font-size: 0.82rem;
       font-weight: 700;
-      font-size: 0.92rem;
-      border-radius: 10px;
       cursor: pointer;
-      transition: all 0.2s ease;
+      transition: all 0.18s ease;
     }
 
     .k-btn:hover {
-      border-color: var(--primary);
-      background: #eff6ff;
+      border-color: var(--cyan);
+      color: var(--text-primary);
     }
 
     .k-btn.active {
-      background: var(--primary);
-      color: #ffffff;
-      border-color: var(--primary);
-      box-shadow: 0 4px 12px rgba(29, 78, 216, 0.25);
+      background: rgba(56, 189, 248, 0.2);
+      border-color: var(--cyan);
+      color: var(--cyan);
+      box-shadow: 0 0 12px rgba(56, 189, 248, 0.28);
     }
 
-    /* Bottom Navigation Controls */
-    .controls-bar {
+    /* Slide Footer inside Stage */
+    .slide-footer {
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+      padding-top: 8px;
+      border-top: 1px solid rgba(148, 163, 184, 0.1);
+      font-size: clamp(0.66rem, 0.8vw, 0.75rem);
+      color: var(--text-muted);
+    }
+
+    /* Bottom Control Bar */
+    .deck-controls {
       position: fixed;
-      bottom: 16px;
+      bottom: 10px;
       left: 50%;
       transform: translateX(-50%);
-      background: rgba(15, 23, 42, 0.92);
-      backdrop-filter: blur(10px);
-      border: 1px solid rgba(255, 255, 255, 0.16);
-      padding: 8px 16px;
-      border-radius: 999px;
       display: flex;
       align-items: center;
-      gap: 12px;
-      z-index: 200;
-      color: #f8fafc;
-      box-shadow: 0 10px 25px rgba(0, 0, 0, 0.4);
+      gap: 10px;
+      background: rgba(11, 17, 32, 0.92);
+      border: 1px solid var(--border-subtle);
+      padding: 6px 14px;
+      border-radius: 999px;
+      box-shadow: 0 10px 30px rgba(0, 0, 0, 0.6);
+      z-index: 70;
+      backdrop-filter: blur(10px);
     }
 
-    .nav-btn {
-      background: rgba(255, 255, 255, 0.12);
-      color: #ffffff;
-      border: none;
-      padding: 7px 14px;
+    .ctrl-btn {
+      background: rgba(30, 41, 59, 0.75);
+      border: 1px solid var(--border-subtle);
+      color: var(--text-primary);
+      padding: 5px 12px;
       border-radius: 999px;
-      font-size: 0.85rem;
+      font-size: 0.78rem;
       font-weight: 600;
       cursor: pointer;
-      transition: background 0.2s;
+      transition: all 0.16s ease;
     }
 
-    .nav-btn:hover:not(:disabled) {
-      background: var(--primary-light);
+    .ctrl-btn:hover:not(:disabled) {
+      background: rgba(56, 189, 248, 0.2);
+      border-color: var(--cyan);
+      color: var(--cyan);
     }
 
-    .nav-btn:disabled {
-      opacity: 0.35;
+    .ctrl-btn:disabled {
+      opacity: 0.38;
       cursor: not-allowed;
     }
 
-    .slide-select {
-      background: rgba(255, 255, 255, 0.1);
-      color: #f8fafc;
-      border: 1px solid rgba(255, 255, 255, 0.2);
-      border-radius: 8px;
-      padding: 5px 10px;
-      font-size: 0.83rem;
-      cursor: pointer;
+    .slide-counter {
+      font-family: var(--font-mono);
+      font-size: 0.8rem;
+      font-weight: 700;
+      color: var(--cyan);
+      min-width: 68px;
+      text-align: center;
     }
 
-    .slide-select option {
-      background: #0f172a;
-      color: #ffffff;
+    /* Optional Speaker Cue Drawer (Toggle with 'N') */
+    .notes-drawer {
+      position: fixed;
+      bottom: 58px;
+      right: 20px;
+      width: min(420px, 90vw);
+      background: rgba(9, 14, 28, 0.96);
+      border: 1px solid var(--border-glow);
+      border-radius: 12px;
+      padding: 12px 16px;
+      box-shadow: 0 18px 40px rgba(0, 0, 0, 0.75);
+      z-index: 80;
+      display: none;
     }
 
-    .kbd-hint {
-      font-size: 0.74rem;
-      color: #94a3b8;
-      padding-left: 6px;
-      border-left: 1px solid rgba(255, 255, 255, 0.2);
+    .notes-drawer.open {
+      display: block;
     }
 
-    /* Responsive adjustments */
-    @media (max-width: 900px) {
-      .slide {
-        padding: 28px 24px 28px;
-        min-height: auto;
-      }
-      .grid-2, .grid-2-weighted, .grid-3, .pipeline-flow {
-        grid-template-columns: 1fr;
-      }
-      .pipe-arrow {
-        transform: rotate(90deg);
-      }
-      .kbd-hint {
-        display: none;
-      }
+    .notes-drawer h4 {
+      font-size: 0.75rem;
+      text-transform: uppercase;
+      letter-spacing: 0.08em;
+      color: var(--cyan);
+      margin-bottom: 5px;
     }
 
-    /* Print / Save as PDF support */
-    @media print {
-      body {
-        background: #ffffff;
-        padding: 0;
-      }
-      .progress-track, .controls-bar {
-        display: none !important;
-      }
-      .slide {
-        display: flex !important;
-        box-shadow: none;
-        border: 1px solid #cbd5e1;
-        page-break-after: always;
-        margin-bottom: 20px;
-        min-height: 640px;
-      }
+    .notes-drawer p {
+      font-size: 0.82rem;
+      line-height: 1.48;
+      color: var(--text-secondary);
+    }
+
+    /* Responsive fallback for smaller/taller screens */
+    @media (max-width: 920px) {
+      html, body { overflow-y: auto; height: auto; }
+      .app-shell { height: auto; min-height: 100vh; padding-top: 18px; }
+      .stage-wrapper { width: 96vw; aspect-ratio: auto; min-height: 78vh; }
+      .grid-2, .grid-2-wide, .grid-3, .grid-4 { grid-template-columns: 1fr; }
     }
   </style>
 </head>
 <body>
-
-  <!-- Top Progress Bar -->
-  <div class="progress-track">
-    <div class="progress-fill" id="progressFill"></div>
+  <div class="progress-bar-track">
+    <div class="progress-bar-fill" id="progressFill"></div>
   </div>
 
-  <main class="deck-stage" id="deckStage">
+  <div class="app-shell">
+    <main class="stage-wrapper" id="deckStage">
 
-    <!-- ==================== SLIDE 1: TITLE ==================== -->
-    <section class="slide slide-hero active" data-title="Title">
-      <div style="max-width: 880px;">
-        <div style="display: inline-block; background: rgba(56, 189, 248, 0.18); border: 1px solid rgba(56, 189, 248, 0.45); color: #7dd3fc; padding: 6px 14px; border-radius: 999px; font-size: 0.82rem; font-weight: 700; letter-spacing: 0.06em; text-transform: uppercase; margin-bottom: 20px;">
-          Application of K-Nearest Neighbors (KNN)
-        </div>
-        <h1 style="font-size: 2.85rem; font-weight: 800; line-height: 1.15; margin-bottom: 18px; letter-spacing: -0.02em;">
-          Image Recognition: Classifying Images Based on Nearby Feature Representations
-        </h1>
-        <p style="font-size: 1.2rem; line-height: 1.6; color: #cbd5e1; margin-bottom: 34px; max-width: 760px;">
-          From raw pixel matrices and visual feature descriptors to Euclidean distance matching, majority voting, and scikit-learn implementation.
-        </p>
-
-        <div style="display: flex; flex-wrap: wrap; gap: 16px;">
-          <div style="display: inline-flex; flex-direction: column; gap: 4px; background: rgba(255, 255, 255, 0.08); border: 1px solid rgba(255, 255, 255, 0.18); border-radius: 14px; padding: 16px 22px;">
-            <div style="font-size: 0.78rem; font-weight: 700; text-transform: uppercase; letter-spacing: 0.06em; color: #fde68a; margin-bottom: 2px;">Presented by (Team)</div>
-            <div style="font-size: 0.96rem; font-weight: 600; color: #ffffff;">MD Azadur Rahman (ID: 4478)</div>
-            <div style="font-size: 0.96rem; font-weight: 600; color: #ffffff;">Rakib Hossain (ID: 4056)</div>
-            <div style="font-size: 0.96rem; font-weight: 600; color: #ffffff;">Aduri Akter (ID: 4032)</div>
-          </div>
-          <div style="display: inline-flex; flex-direction: column; gap: 4px; background: rgba(255, 255, 255, 0.08); border: 1px solid rgba(255, 255, 255, 0.18); border-radius: 14px; padding: 16px 22px;">
-            <div style="font-size: 0.78rem; font-weight: 700; text-transform: uppercase; letter-spacing: 0.06em; color: #7dd3fc; margin-bottom: 2px;">Course Teacher</div>
-            <div style="font-size: 1.02rem; font-weight: 700; color: #ffffff;">Ahsan Ullah</div>
-            <div style="font-size: 0.9rem; color: #e2e8f0;">Assistant Professor, Dept. of CSE</div>
-            <div style="font-size: 0.9rem; color: #7dd3fc; font-weight: 600;">World University of Bangladesh</div>
-          </div>
-        </div>
-      </div>
-      <div class="slide-footer">
-        <span>Lecture Expansion from KNN.md</span>
-        <span>Slide 1 / 14</span>
-      </div>
-    </section>
-
-    <!-- ==================== SLIDE 2: LEARNING OBJECTIVES ==================== -->
-    <section class="slide" data-title="Learning Objectives">
-      <div class="slide-header">
-        <div>
-          <div class="slide-kicker">Course Outcomes</div>
-          <h2 class="slide-title">Learning Objectives</h2>
-        </div>
-        <span class="slide-badge">Goals</span>
-      </div>
-      <div class="slide-body">
-        <p class="lead-text">By the end of this presentation, students will be able to:</p>
-        <div class="grid-2" style="gap: 14px;">
-          <div class="card card-blue">
-            <h3>1. Image Feature Representations</h3>
-            <p>Explain how digital images are converted into numerical feature vectors (pixel arrays, visual descriptors, and embeddings).</p>
-          </div>
-          <div class="card card-indigo">
-            <h3>2. Euclidean Distance in Image Space</h3>
-            <p>Calculate distances between two image representations using the multi-feature Euclidean distance formula.</p>
-          </div>
-          <div class="card card-emerald">
-            <h3>3. Step-by-Step Image Classification</h3>
-            <p>Apply KNN step-by-step—from computing distances to selecting K neighbors and running majority voting.</p>
-          </div>
-          <div class="card card-amber">
-            <h3>4. Scaling &amp; Choosing K</h3>
-            <p>Explain why feature scaling is critical in KNN and how the value of K controls overfitting vs. underfitting.</p>
-          </div>
-        </div>
-        <div class="card" style="background: #f1f5f9; display: flex; align-items: center; justify-content: space-between; gap: 16px;">
-          <div>
-            <h3>5. Practical Implementation &amp; Critical Evaluation</h3>
-            <p>Implement an image recognition pipeline with <code>scikit-learn</code> and identify KNN's advantages, limitations, and real-world uses.</p>
-          </div>
-          <span class="pill pill-blue">Hands-On Colab Ready</span>
-        </div>
-      </div>
-      <div class="slide-footer">
-        <span>KNN in Image Recognition &bull; Dept. of CSE, WUB</span>
-        <span>Slide 2 / 14</span>
-      </div>
-    </section>
-
-    <!-- ==================== SLIDE 3: HOW KNN SEES AN IMAGE ==================== -->
-    <section class="slide" data-title="How KNN Sees an Image">
-      <div class="slide-header">
-        <div>
-          <div class="slide-kicker">Core Intuition</div>
-          <h2 class="slide-title">Introduction: How KNN Sees an Image</h2>
-        </div>
-        <span class="slide-badge">Pipeline</span>
-      </div>
-      <div class="slide-body">
-        <p class="lead-text">
-          KNN predicts the class of a new data point by examining its nearest neighbors in the training dataset. For <strong>image recognition</strong>, an image is first transformed into numbers so we can measure visual similarity mathematically.
-        </p>
-
-        <div class="pipeline-flow">
-          <div class="pipe-step" style="border-color: #93c5fd; background: #eff6ff;">
-            <div style="font-size: 0.85rem; font-weight: 700; color: #1e40af;">1. Query Image (Digit 0)</div>
-            <div class="pixel-grid" aria-label="5x5 pixel representation of digit 0">
-              <div class="px" style="background:#f8fafc;color:#94a3b8">0</div><div class="px" style="background:#1e293b;color:#fff">9</div><div class="px" style="background:#0f172a;color:#fff">9</div><div class="px" style="background:#1e293b;color:#fff">9</div><div class="px" style="background:#f8fafc;color:#94a3b8">0</div>
-              <div class="px" style="background:#1e293b;color:#fff">8</div><div class="px" style="background:#e2e8f0;color:#475569">1</div><div class="px" style="background:#f8fafc;color:#94a3b8">0</div><div class="px" style="background:#e2e8f0;color:#475569">1</div><div class="px" style="background:#1e293b;color:#fff">8</div>
-              <div class="px" style="background:#0f172a;color:#fff">9</div><div class="px" style="background:#f8fafc;color:#94a3b8">0</div><div class="px" style="background:#f8fafc;color:#94a3b8">0</div><div class="px" style="background:#f8fafc;color:#94a3b8">0</div><div class="px" style="background:#0f172a;color:#fff">9</div>
-              <div class="px" style="background:#1e293b;color:#fff">8</div><div class="px" style="background:#e2e8f0;color:#475569">1</div><div class="px" style="background:#f8fafc;color:#94a3b8">0</div><div class="px" style="background:#e2e8f0;color:#475569">1</div><div class="px" style="background:#1e293b;color:#fff">8</div>
-              <div class="px" style="background:#f8fafc;color:#94a3b8">0</div><div class="px" style="background:#1e293b;color:#fff">9</div><div class="px" style="background:#0f172a;color:#fff">9</div><div class="px" style="background:#1e293b;color:#fff">9</div><div class="px" style="background:#f8fafc;color:#94a3b8">0</div>
-            </div>
-            <div style="font-size: 0.78rem; color: var(--text-muted);">Grid of pixel intensities</div>
-          </div>
-
-          <div class="pipe-arrow">&rarr;</div>
-
-          <div class="pipe-step" style="border-color: #a5b4fc; background: #eef2ff;">
-            <div style="font-size: 0.85rem; font-weight: 700; color: #3730a3;">2. Feature Extractor</div>
-            <div style="font-size: 2rem;">&#9881;&#65039;</div>
-            <p style="font-size: 0.8rem; color: var(--text-secondary);">Flattens pixels or extracts edges, brightness &amp; embeddings</p>
-          </div>
-
-          <div class="pipe-arrow">&rarr;</div>
-
-          <div class="pipe-step" style="border-color: #fde68a; background: #fffbeb;">
-            <div style="font-size: 0.85rem; font-weight: 700; color: #92400e;">3. Feature Vector</div>
-            <div class="vector-chip">
-              x = [x&#8321;, x&#8322;, &hellip;, x&#8345;]<br />
-              e.g. [3, 6, 4] or 64-D pixels
-            </div>
-            <div style="font-size: 0.78rem; color: var(--text-muted);">Point in feature space</div>
-          </div>
-
-          <div class="pipe-arrow">&rarr;</div>
-
-          <div class="pipe-step" style="border-color: #a7f3d0; background: #ecfdf5;">
-            <div style="font-size: 0.85rem; font-weight: 700; color: #065f46;">4. K Nearest Neighbors</div>
-            <div style="font-size: 1.15rem; font-weight: 800; color: #047857;">Class: Digit 0</div>
-            <p style="font-size: 0.8rem; color: var(--text-secondary);">Majority vote among closest training images</p>
-          </div>
+      <!-- ==================== SLIDE 1: TITLE ==================== -->
+      <section class="slide active" data-cue="Welcome the class! Frame today's journey: Pixels -> Feature Vectors -> Geometric Closeness -> KNN -> Deep CNN Embeddings + Live Colab Demo.">
+        <div style="display:flex; justify-content:space-between; align-items:center;">
+          <span class="tag-pill">Computer Vision &amp; Machine Learning Lecture</span>
+          <span style="font-family:var(--font-mono); font-size:0.78rem; color:var(--text-muted);">17-Slide Interactive Deck + Google Colab</span>
         </div>
 
-        <div class="card" style="padding: 12px 18px; background: #f8fafc;">
-          <strong>Key Concept:</strong> Visually similar images produce <strong>nearby feature representations</strong> in multi-dimensional space.
-        </div>
-      </div>
-      <div class="slide-footer">
-        <span>KNN in Image Recognition &bull; Dept. of CSE, WUB</span>
-        <span>Slide 3 / 14</span>
-      </div>
-    </section>
-
-    <!-- ==================== SLIDE 4: IMPORTANT TERMINOLOGY ==================== -->
-    <section class="slide" data-title="Important Terminology">
-      <div class="slide-header">
-        <div>
-          <div class="slide-kicker">Foundations</div>
-          <h2 class="slide-title">Important Terminology in Image KNN</h2>
-        </div>
-        <span class="slide-badge">Definitions</span>
-      </div>
-      <div class="slide-body">
-        <table class="data-table">
-          <thead>
-            <tr>
-              <th style="width: 28%;">Term</th>
-              <th>Explanation in Image Recognition</th>
-            </tr>
-          </thead>
-          <tbody>
-            <tr>
-              <td><strong>K</strong></td>
-              <td>Number of nearest training images considered when predicting the label of a new image.</td>
-            </tr>
-            <tr>
-              <td><strong>Feature Representation</strong></td>
-              <td>A numerical vector <code>[x&#8321;, x&#8322;, &hellip;, x&#8345;]</code> summarizing an image's pixels, edges, shapes, or learned embedding.</td>
-            </tr>
-            <tr>
-              <td><strong>Neighbor Image</strong></td>
-              <td>A previously labeled training image whose feature vector lies close to the query image in feature space.</td>
-            </tr>
-            <tr>
-              <td><strong>Distance</strong></td>
-              <td>A mathematical measure (usually Euclidean distance) of how visually different two image representations are.</td>
-            </tr>
-            <tr>
-              <td><strong>Majority Voting</strong></td>
-              <td>Classification rule that assigns the most common image label among the <em>K</em> nearest neighbors.</td>
-            </tr>
-            <tr>
-              <td><strong>Training Image Dataset</strong></td>
-              <td>Collection of stored images with known class labels (e.g., digits 0–9, faces, product categories).</td>
-            </tr>
-          </tbody>
-        </table>
-      </div>
-      <div class="slide-footer">
-        <span>KNN in Image Recognition &bull; Dept. of CSE, WUB</span>
-        <span>Slide 4 / 14</span>
-      </div>
-    </section>
-
-    <!-- ==================== SLIDE 5: WHAT ARE FEATURE REPRESENTATIONS ==================== -->
-    <section class="slide" data-title="Image Feature Representations">
-      <div class="slide-header">
-        <div>
-          <div class="slide-kicker">Data Encoding</div>
-          <h2 class="slide-title">What Are "Feature Representations" of Images?</h2>
-        </div>
-        <span class="slide-badge">3 Approaches</span>
-      </div>
-      <div class="slide-body">
-        <p class="lead-text">
-          Choosing the right feature representation determines what "nearby" actually means when KNN compares two images:
-        </p>
-        <div class="grid-3">
-          <div class="card card-blue" style="display: flex; flex-direction: column; justify-content: space-between; gap: 12px;">
-            <div>
-              <span class="pill pill-blue" style="margin-bottom: 10px;">1. Raw Pixel Vectors</span>
-              <h3>Flattened Intensities</h3>
-              <p>An <strong>8&times;8</strong> grayscale image becomes a <strong>64-D vector</strong>; a 28&times;28 MNIST image becomes a <strong>784-D vector</strong>.</p>
-            </div>
-            <div style="font-size: 0.84rem; background: #fff; padding: 10px; border-radius: 8px; border: 1px solid #bfdbfe;">
-              <strong>Pros:</strong> Zero setup.<br />
-              <strong>Cons:</strong> Sensitive to image shifts, rotation, and lighting changes.
-            </div>
-          </div>
-
-          <div class="card card-amber" style="display: flex; flex-direction: column; justify-content: space-between; gap: 12px;">
-            <div>
-              <span class="pill pill-amber" style="margin-bottom: 10px;">2. Handcrafted Descriptors</span>
-              <h3>Visual Features (HOG / Color)</h3>
-              <p>Extracts compact measurements like <strong>center brightness</strong>, <strong>loop score</strong>, <strong>edge orientation</strong>, or color histograms.</p>
-            </div>
-            <div style="font-size: 0.84rem; background: #fff; padding: 10px; border-radius: 8px; border: 1px solid #fde68a;">
-              <strong>Pros:</strong> Interpretable &amp; compact.<br />
-              <strong>Cons:</strong> Requires domain design (we use 3 visual features in our worked example!).
-            </div>
-          </div>
-
-          <div class="card card-emerald" style="display: flex; flex-direction: column; justify-content: space-between; gap: 12px;">
-            <div>
-              <span class="pill pill-emerald" style="margin-bottom: 10px;">3. Compact Embeddings</span>
-              <h3>PCA &amp; Deep CNN Embeddings</h3>
-              <p>Projects images into a <strong>semantic embedding space</strong> (e.g., 20-D PCA or 512-D ResNet/CLIP vectors) before running KNN.</p>
-            </div>
-            <div style="font-size: 0.84rem; background: #fff; padding: 10px; border-radius: 8px; border: 1px solid #a7f3d0;">
-              <strong>Pros:</strong> High accuracy, robust to background clutter, fast search.<br />
-              <strong>Best for:</strong> Modern visual search &amp; face ID.
-            </div>
-          </div>
-        </div>
-      </div>
-      <div class="slide-footer">
-        <span>KNN in Image Recognition &bull; Dept. of CSE, WUB</span>
-        <span>Slide 5 / 14</span>
-      </div>
-    </section>
-
-    <!-- ==================== SLIDE 6: HOW KNN IMAGE CLASSIFICATION WORKS ==================== -->
-    <section class="slide" data-title="How KNN Image Classification Works">
-      <div class="slide-header">
-        <div>
-          <div class="slide-kicker">Algorithm Workflow</div>
-          <h2 class="slide-title">How KNN Image Classification Works</h2>
-        </div>
-        <span class="slide-badge">5-Step Process</span>
-      </div>
-      <div class="slide-body">
-        <div class="grid-2-weighted">
-          <ul class="styled-list">
-            <li>
-              <span class="bullet-num">1</span>
-              <div><strong>Store Training Representations:</strong> Save the extracted feature vectors and known class labels of all training images.</div>
-            </li>
-            <li>
-              <span class="bullet-num">2</span>
-              <div><strong>Choose K:</strong> Pick how many nearest neighbor images will vote (e.g., <em>K = 3</em>).</div>
-            </li>
-            <li>
-              <span class="bullet-num">3</span>
-              <div><strong>Compute Distances:</strong> Calculate the Euclidean distance from the new query image <code>?</code> to every stored training image.</div>
-            </li>
-            <li>
-              <span class="bullet-num">4</span>
-              <div><strong>Select K Nearest Neighbors:</strong> Identify the <em>K</em> training images with the smallest distances.</div>
-            </li>
-            <li>
-              <span class="bullet-num">5</span>
-              <div><strong>Majority Voting:</strong> Assign the class label that appears most often among those <em>K</em> neighbors.</div>
-            </li>
-          </ul>
-
-          <!-- Inline SVG: 2D Feature Space Illustration -->
-          <div class="card" style="padding: 14px; text-align: center; background: #f8fafc;">
-            <div style="font-size: 0.86rem; font-weight: 700; color: var(--text-main); margin-bottom: 6px;">2D Feature Space (K = 3 Neighborhood)</div>
-            <svg viewBox="0 0 360 270" width="100%" height="auto" role="img" aria-label="2D Feature space with Digit 0 and Digit 1 clusters and K=3 neighborhood circle">
-              <!-- Grid background -->
-              <rect x="35" y="15" width="310" height="220" fill="#ffffff" stroke="#cbd5e1" rx="8" />
-              <line x1="35" y1="125" x2="345" y2="125" stroke="#f1f5f9" stroke-width="1.5" />
-              <line x1="190" y1="15" x2="190" y2="235" stroke="#f1f5f9" stroke-width="1.5" />
-
-              <!-- Axis labels -->
-              <text x="190" y="256" text-anchor="middle" font-size="11" fill="#475569" font-weight="600">Feature 1: Center Brightness &rarr;</text>
-              <text x="16" y="125" text-anchor="middle" font-size="11" fill="#475569" font-weight="600" transform="rotate(-90 16 125)">Feature 2: Loop Score &rarr;</text>
-
-              <!-- K=3 Neighborhood Circle around Query (130, 95) -->
-              <circle cx="130" cy="95" r="56" fill="rgba(59, 130, 246, 0.12)" stroke="#2563eb" stroke-width="2" stroke-dasharray="5,4" />
-              <text x="130" y="34" text-anchor="middle" font-size="10.5" fill="#1d4ed8" font-weight="700">K = 3 Radius</text>
-
-              <!-- Lines to 3 nearest neighbors -->
-              <line x1="130" y1="95" x2="108" y2="70" stroke="#64748b" stroke-width="1.5" stroke-dasharray="3,2" />
-              <line x1="130" y1="95" x2="96" y2="118" stroke="#64748b" stroke-width="1.5" stroke-dasharray="3,2" />
-              <line x1="130" y1="95" x2="174" y2="112" stroke="#64748b" stroke-width="1.5" stroke-dasharray="3,2" />
-
-              <!-- Digit 0 cluster (Blue circles) -->
-              <circle cx="108" cy="70" r="9" fill="#2563eb" stroke="#fff" stroke-width="2" />
-              <circle cx="96" cy="118" r="9" fill="#2563eb" stroke="#fff" stroke-width="2" />
-              <circle cx="72" cy="84" r="8" fill="#2563eb" opacity="0.85" />
-              <circle cx="80" cy="54" r="8" fill="#2563eb" opacity="0.85" />
-              <text x="86" y="42" font-size="11" fill="#1e40af" font-weight="700">Digit 0 Cluster</text>
-
-              <!-- Digit 1 cluster (Amber squares) -->
-              <rect x="166" y="104" width="16" height="16" rx="3" fill="#f59e0b" stroke="#fff" stroke-width="2" />
-              <rect x="245" y="160" width="15" height="15" rx="3" fill="#f59e0b" opacity="0.9" />
-              <rect x="275" y="178" width="15" height="15" rx="3" fill="#f59e0b" opacity="0.9" />
-              <rect x="260" y="135" width="15" height="15" rx="3" fill="#f59e0b" opacity="0.9" />
-              <text x="270" y="210" text-anchor="middle" font-size="11" fill="#b45309" font-weight="700">Digit 1 Cluster</text>
-
-              <!-- Query Image '?' -->
-              <circle cx="130" cy="95" r="12" fill="#e11d48" stroke="#ffffff" stroke-width="2.5" />
-              <text x="130" y="99" text-anchor="middle" font-size="13" fill="#ffffff" font-weight="800">?</text>
-            </svg>
-            <div style="font-size: 0.82rem; color: var(--text-secondary); margin-top: 4px;">
-              Inside circle: <strong>2 Blue (Digit 0)</strong> vs. <strong>1 Amber (Digit 1)</strong> &rarr; Predict <strong style="color:#1d4ed8;">Digit 0</strong>
-            </div>
-          </div>
-        </div>
-      </div>
-      <div class="slide-footer">
-        <span>KNN in Image Recognition &bull; Dept. of CSE, WUB</span>
-        <span>Slide 6 / 14</span>
-      </div>
-    </section>
-
-    <!-- ==================== SLIDE 7: DISTANCE CALCULATION ==================== -->
-    <section class="slide" data-title="Distance Calculation">
-      <div class="slide-header">
-        <div>
-          <div class="slide-kicker">Mathematical Similarity</div>
-          <h2 class="slide-title">Distance Calculation Between Image Representations</h2>
-        </div>
-        <span class="slide-badge">Euclidean Formula</span>
-      </div>
-      <div class="slide-body">
-        <p class="lead-text">
-          To decide which stored image is "closest" to a query image, KNN commonly computes the <strong>Euclidean distance</strong> between their feature vectors.
-        </p>
-
-        <div class="grid-2">
-          <div class="card card-blue">
-            <h3>For Two Features (2D Image Descriptors)</h3>
-            <p style="margin-bottom: 12px;">For two image feature points <strong>A = (x&#8321;, y&#8321;)</strong> and <strong>B = (x&#8322;, y&#8322;)</strong>:</p>
-            <div class="math-box">
-              d(A, B) = &radic;<span style="text-decoration: overline;">(x&#8322; &minus; x&#8321;)&sup2; + (y&#8322; &minus; y&#8321;)&sup2;</span>
-            </div>
-          </div>
-
-          <div class="card card-indigo">
-            <h3>For Multiple Features (<em>n</em>-D Vector)</h3>
-            <p style="margin-bottom: 12px;">For flattened 64-pixel vectors or <em>n</em>-dimensional embeddings:</p>
-            <div class="math-box">
-              d(A, B) = &radic;<span style="text-decoration: overline;">&Sigma;<sub>i=1..n</sub> (a<sub>i</sub> &minus; b<sub>i</sub>)&sup2;</span>
-            </div>
-          </div>
-        </div>
-
-        <div class="card" style="background: #f8fafc;">
-          <h3>Visual Intuition: Feature-by-Feature Comparison</h3>
-          <div style="display: grid; grid-template-columns: repeat(3, 1fr); gap: 14px; margin-top: 8px; text-align: center;">
-            <div style="background:#fff; padding:10px; border-radius:8px; border:1px solid var(--border);">
-              <div style="font-size:0.78rem; color:var(--text-muted);">Feature 1 Difference</div>
-              <div style="font-weight:700; color:var(--primary); font-size:1rem;">(a&#8321; &minus; b&#8321;)&sup2;</div>
-            </div>
-            <div style="background:#fff; padding:10px; border-radius:8px; border:1px solid var(--border);">
-              <div style="font-size:0.78rem; color:var(--text-muted);">Feature 2 Difference</div>
-              <div style="font-weight:700; color:var(--primary); font-size:1rem;">(a&#8322; &minus; b&#8322;)&sup2;</div>
-            </div>
-            <div style="background:#fff; padding:10px; border-radius:8px; border:1px solid var(--border);">
-              <div style="font-size:0.78rem; color:var(--text-muted);">Feature <em>n</em> Difference</div>
-              <div style="font-weight:700; color:var(--primary); font-size:1rem;">(a<sub>n</sub> &minus; b<sub>n</sub>)&sup2;</div>
-            </div>
-          </div>
-          <p style="margin-top: 10px; font-size: 0.9rem;">
-            Smaller distance <strong>d(A, B)</strong> means stronger visual similarity in feature space. If two images have identical features, <strong>d = 0</strong>.
-          </p>
-        </div>
-      </div>
-      <div class="slide-footer">
-        <span>KNN in Image Recognition &bull; Dept. of CSE, WUB</span>
-        <span>Slide 7 / 14</span>
-      </div>
-    </section>
-
-    <!-- ==================== SLIDE 8: WORKED EXAMPLE PART 1 ==================== -->
-    <section class="slide" data-title="Worked Example (Part 1)">
-      <div class="slide-header">
-        <div>
-          <div class="slide-kicker">Worked Example &bull; Part 1</div>
-          <h2 class="slide-title">Training Images &amp; Extracted Feature Vectors</h2>
-        </div>
-        <span class="slide-badge">Digit 0 vs. Digit 1</span>
-      </div>
-      <div class="slide-body">
-        <div class="card card-blue" style="padding: 14px 18px;">
-          <strong>Problem:</strong> Classify a new handwritten digit image as <strong>Digit 0</strong> or <strong>Digit 1</strong> using 3 visual features (each scored 0–10):
-          <span style="display: block; margin-top: 6px; font-size: 0.9rem;">
-            <strong>x&#8321;: Center Brightness</strong> (hollow in 0, bright in 1) &bull;
-            <strong>x&#8322;: Loop Score</strong> (closed loop in 0) &bull;
-            <strong>x&#8323;: Vertical Stroke Ratio</strong>
-          </span>
-        </div>
-
-        <table class="data-table">
-          <thead>
-            <tr>
-              <th>Stored Image</th>
-              <th>Center Brightness (x&#8321;)</th>
-              <th>Loop Score (x&#8322;)</th>
-              <th>Vertical Ratio (x&#8323;)</th>
-              <th>Known Class (Y)</th>
-            </tr>
-          </thead>
-          <tbody>
-            <tr>
-              <td><strong>Image A</strong></td>
-              <td>2</td>
-              <td>8</td>
-              <td>3</td>
-              <td><span class="pill pill-blue">Digit 0</span></td>
-            </tr>
-            <tr>
-              <td><strong>Image B</strong></td>
-              <td>3</td>
-              <td>7</td>
-              <td>4</td>
-              <td><span class="pill pill-blue">Digit 0</span></td>
-            </tr>
-            <tr>
-              <td><strong>Image C</strong></td>
-              <td>8</td>
-              <td>2</td>
-              <td>9</td>
-              <td><span class="pill pill-amber">Digit 1</span></td>
-            </tr>
-            <tr>
-              <td><strong>Image D</strong></td>
-              <td>7</td>
-              <td>3</td>
-              <td>8</td>
-              <td><span class="pill pill-amber">Digit 1</span></td>
-            </tr>
-            <tr>
-              <td><strong>Image E</strong></td>
-              <td>9</td>
-              <td>1</td>
-              <td>9</td>
-              <td><span class="pill pill-amber">Digit 1</span></td>
-            </tr>
-          </tbody>
-        </table>
-
-        <div class="card card-rose" style="display: flex; justify-content: space-between; align-items: center; padding: 14px 20px;">
-          <div>
-            <strong>New Mystery Image (Query):</strong> Feature vector <strong>X<sub>new</sub> = (3, 6, 4)</strong>
-          </div>
-          <div>
-            <strong>Choice of K:</strong> <span class="pill pill-rose" style="font-size: 0.9rem;">K = 3</span>
-          </div>
-        </div>
-      </div>
-      <div class="slide-footer">
-        <span>KNN in Image Recognition &bull; Dept. of CSE, WUB</span>
-        <span>Slide 8 / 14</span>
-      </div>
-    </section>
-
-    <!-- ==================== SLIDE 9: WORKED EXAMPLE PART 2 ==================== -->
-    <section class="slide" data-title="Worked Example (Part 2)">
-      <div class="slide-header">
-        <div>
-          <div class="slide-kicker">Worked Example &bull; Part 2</div>
-          <h2 class="slide-title">Distance Calculation &amp; Majority Voting (K = 3)</h2>
-        </div>
-        <span class="slide-badge">Step-by-Step Solution</span>
-      </div>
-      <div class="slide-body">
-        <table class="data-table">
-          <thead>
-            <tr>
-              <th>Image</th>
-              <th>Vector</th>
-              <th>Euclidean Distance Calculation from X<sub>new</sub> = (3, 6, 4)</th>
-              <th>Distance</th>
-              <th>Class</th>
-              <th>Selected?</th>
-            </tr>
-          </thead>
-          <tbody>
-            <tr class="row-highlight">
-              <td><strong>B</strong></td>
-              <td>(3, 7, 4)</td>
-              <td>&radic;<span style="text-decoration:overline;">(3&minus;3)&sup2; + (6&minus;7)&sup2; + (4&minus;4)&sup2;</span> = &radic;1</td>
-              <td><strong>1.00</strong></td>
-              <td>Digit 0</td>
-              <td><strong>#1 Nearest</strong></td>
-            </tr>
-            <tr class="row-highlight">
-              <td><strong>A</strong></td>
-              <td>(2, 8, 3)</td>
-              <td>&radic;<span style="text-decoration:overline;">(3&minus;2)&sup2; + (6&minus;8)&sup2; + (4&minus;3)&sup2;</span> = &radic;6</td>
-              <td><strong>2.45</strong></td>
-              <td>Digit 0</td>
-              <td><strong>#2 Nearest</strong></td>
-            </tr>
-            <tr class="row-highlight-blue">
-              <td><strong>D</strong></td>
-              <td>(7, 3, 8)</td>
-              <td>&radic;<span style="text-decoration:overline;">(3&minus;7)&sup2; + (6&minus;3)&sup2; + (4&minus;8)&sup2;</span> = &radic;41</td>
-              <td><strong>6.40</strong></td>
-              <td>Digit 1</td>
-              <td><strong>#3 Nearest</strong></td>
-            </tr>
-            <tr>
-              <td>C</td>
-              <td>(8, 2, 9)</td>
-              <td>&radic;<span style="text-decoration:overline;">(3&minus;8)&sup2; + (6&minus;2)&sup2; + (4&minus;9)&sup2;</span> = &radic;66</td>
-              <td>8.12</td>
-              <td>Digit 1</td>
-              <td>&mdash;</td>
-            </tr>
-            <tr>
-              <td>E</td>
-              <td>(9, 1, 9)</td>
-              <td>&radic;<span style="text-decoration:overline;">(3&minus;9)&sup2; + (6&minus;1)&sup2; + (4&minus;9)&sup2;</span> = &radic;86</td>
-              <td>9.27</td>
-              <td>Digit 1</td>
-              <td>&mdash;</td>
-            </tr>
-          </tbody>
-        </table>
-
-        <div class="grid-2">
-          <div class="card">
-            <h3>Step 4: Majority Vote Among Top 3</h3>
-            <p>
-              Selected neighbors: <strong>B (Digit 0)</strong>, <strong>A (Digit 0)</strong>, <strong>D (Digit 1)</strong><br />
-              Vote tally: <strong>2 votes for Digit 0</strong> vs. <strong>1 vote for Digit 1</strong>
+        <div class="grid-2-wide" style="align-items:center;">
+          <div style="display:flex; flex-direction:column; gap:16px;">
+            <div class="kicker" style="font-size:0.86rem;">From Raw Pixels to Semantic Embeddings</div>
+            <h1 style="font-size:clamp(1.85rem, 3vw, 2.85rem); font-weight:800; line-height:1.12; letter-spacing:-0.025em; background:linear-gradient(95deg, #ffffff 0%, #bae6fd 55%, #818cf8 100%); -webkit-background-clip:text; -webkit-text-fill-color:transparent;">
+              Image Recognition: Classifying Images Based on Nearby Feature Representations
+            </h1>
+            <p style="font-size:clamp(0.88rem, 1.15vw, 1.06rem); color:var(--text-secondary); line-height:1.58;">
+              How computers transform images into numerical coordinates, measure visual similarity using Euclidean &amp; Cosine metrics, and classify unseen examples via neighborhood consensus.
             </p>
-          </div>
-          <div class="card card-emerald" style="display: flex; flex-direction: column; justify-content: center; text-align: center;">
-            <div style="font-size: 0.85rem; text-transform: uppercase; font-weight: 700; color: #065f46;">Final Prediction</div>
-            <div style="font-size: 1.55rem; font-weight: 800; color: #047857;">Predicted Class = Digit 0</div>
-          </div>
-        </div>
-      </div>
-      <div class="slide-footer">
-        <span>KNN in Image Recognition &bull; Dept. of CSE, WUB</span>
-        <span>Slide 9 / 14</span>
-      </div>
-    </section>
-
-    <!-- ==================== SLIDE 10: FEATURE SCALING ==================== -->
-    <section class="slide" data-title="Feature Scaling">
-      <div class="slide-header">
-        <div>
-          <div class="slide-kicker">Crucial Preprocessing</div>
-          <h2 class="slide-title">Feature Scaling in Image Recognition</h2>
-        </div>
-        <span class="slide-badge">Normalization</span>
-      </div>
-      <div class="slide-body">
-        <p class="lead-text">
-          Just like annual income (10,000–100,000) overwhelms age (18–70) in tabular KNN, <strong>large-scale visual features dominate Euclidean distance</strong> if left unscaled.
-        </p>
-
-        <div class="grid-2">
-          <div class="card card-rose">
-            <h3>Without Feature Scaling (Skewed)</h3>
-            <p style="margin-bottom: 10px;">Suppose an image feature vector combines:</p>
-            <ul class="styled-list" style="gap: 6px;">
-              <li>&bull; <strong>Total Pixel Intensity Sum:</strong> range <code>0</code> to <code>16,000</code></li>
-              <li>&bull; <strong>Vertical Symmetry Ratio:</strong> range <code>0.0</code> to <code>1.0</code></li>
-            </ul>
-            <div class="math-box" style="margin-top: 12px; font-size: 0.95rem; border-color: var(--rose);">
-              d = &radic;<span style="text-decoration:overline;">(16000&minus;15000)&sup2; + (0.9&minus;0.2)&sup2;</span> &approx; 1000.0002
+            <div style="display:flex; gap:10px; flex-wrap:wrap; margin-top:4px;">
+              <span class="tag-pill" style="border-color:rgba(52,211,153,0.4); color:var(--emerald); background:rgba(52,211,153,0.1);">NumPy &bull; Matplotlib &bull; Scikit-learn</span>
+              <span class="tag-pill" style="border-color:rgba(129,140,248,0.4); color:var(--indigo); background:rgba(129,140,248,0.1);">Live Colab Demo Included</span>
             </div>
-            <p style="margin-top: 8px; font-size: 0.88rem;">Symmetry is completely ignored!</p>
           </div>
 
-          <div class="card card-emerald">
-            <h3>With StandardScaler / Normalization</h3>
-            <p style="margin-bottom: 10px;">Scale all features to comparable ranges before KNN:</p>
-            <ul class="styled-list" style="gap: 6px;">
-              <li>&bull; <strong>Pixel Normalization:</strong> divide by max intensity (<code>X / 255.0</code>)</li>
-              <li>&bull; <strong>Standardization (<code>StandardScaler</code>):</strong> zero mean, unit variance</li>
-            </ul>
-            <div class="math-box" style="margin-top: 12px; font-size: 0.95rem; border-color: var(--emerald);">
-              z = (x &minus; &mu;) / &sigma;
+          <!-- Hero SVG Illustration: Feature Space Neighborhood -->
+          <div class="card" style="padding:14px; background:rgba(9,14,28,0.85); border-color:rgba(56,189,248,0.28);">
+            <svg viewBox="0 0 360 250" width="100%" aria-label="Feature space cluster preview">
+              <defs>
+                <radialGradient id="heroGlow" cx="50%" cy="50%" r="50%">
+                  <stop offset="0%" stop-color="#38bdf8" stop-opacity="0.28"/>
+                  <stop offset="100%" stop-color="#38bdf8" stop-opacity="0"/>
+                </radialGradient>
+              </defs>
+              <line x1="36" y1="215" x2="335" y2="215" stroke="#334155" stroke-width="1.5"/>
+              <line x1="36" y1="215" x2="36" y2="22" stroke="#334155" stroke-width="1.5"/>
+              <text x="185" y="238" fill="#94a3b8" font-size="10" text-anchor="middle">Feature x&#8321; (Center Ink Intensity)</text>
+              <text x="14" y="120" fill="#94a3b8" font-size="10" text-anchor="middle" transform="rotate(-90 14 120)">Feature x&#8322; (Loop Score)</text>
+
+              <!-- K=3 Radius -->
+              <circle cx="128" cy="92" r="56" fill="url(#heroGlow)" stroke="#38bdf8" stroke-width="1.6" stroke-dasharray="5,4"/>
+              <!-- Digit 0 Cluster -->
+              <circle cx="95" cy="64" r="8" fill="#38bdf8"/><text x="95" y="67" fill="#050811" font-size="9" font-weight="bold" text-anchor="middle">0</text>
+              <circle cx="118" cy="72" r="8" fill="#38bdf8"/><text x="118" y="75" fill="#050811" font-size="9" font-weight="bold" text-anchor="middle">0</text>
+              <circle cx="84" cy="102" r="8" fill="#38bdf8"/><text x="84" y="105" fill="#050811" font-size="9" font-weight="bold" text-anchor="middle">0</text>
+              <circle cx="148" cy="56" r="8" fill="#38bdf8"/><text x="148" y="59" fill="#050811" font-size="9" font-weight="bold" text-anchor="middle">0</text>
+
+              <!-- Digit 1 Cluster -->
+              <circle cx="255" cy="168" r="8" fill="#fbbf24"/><text x="255" y="171" fill="#050811" font-size="9" font-weight="bold" text-anchor="middle">1</text>
+              <circle cx="282" cy="182" r="8" fill="#fbbf24"/><text x="282" y="185" fill="#050811" font-size="9" font-weight="bold" text-anchor="middle">1</text>
+              <circle cx="238" cy="190" r="8" fill="#fbbf24"/><text x="238" y="193" fill="#050811" font-size="9" font-weight="bold" text-anchor="middle">1</text>
+              <circle cx="168" cy="122" r="8" fill="#fbbf24"/><text x="168" y="125" fill="#050811" font-size="9" font-weight="bold" text-anchor="middle">1</text>
+
+              <!-- Query -->
+              <line x1="128" y1="92" x2="118" y2="72" stroke="#34d399" stroke-width="1.4"/>
+              <line x1="128" y1="92" x2="95" y2="64" stroke="#34d399" stroke-width="1.4"/>
+              <line x1="128" y1="92" x2="168" y2="122" stroke="#fbbf24" stroke-width="1.2" stroke-dasharray="3,2"/>
+              <circle cx="128" cy="92" r="10" fill="#fb7185" stroke="#fff" stroke-width="2"/>
+              <text x="128" y="96" fill="#fff" font-size="11" font-weight="bold" text-anchor="middle">?</text>
+              <rect x="192" y="34" width="136" height="44" rx="8" fill="#11192c" stroke="#34d399" stroke-width="1"/>
+              <text x="260" y="52" fill="#34d399" font-size="10" font-weight="bold" text-anchor="middle">K = 3 Majority Vote</text>
+              <text x="260" y="68" fill="#cbd5e1" font-size="9.5" text-anchor="middle">2 &times; '0' vs 1 &times; '1' &rarr; Digit 0</text>
+            </svg>
+          </div>
+        </div>
+
+        <div class="slide-footer">
+          <span>Use &larr; / &rarr; Arrow Keys &bull; Press 'F' for Fullscreen &bull; Press 'N' for Speaker Cues</span>
+          <span>Slide 01 / 17</span>
+        </div>
+      </section>
+
+      <!-- ==================== SLIDE 2: EVERYDAY INTUITION ==================== -->
+      <section class="slide" data-cue="Use the fruit-market analogy first. Distinguish Image Recognition (broad umbrella) vs Image Classification (1 label per image), and clarify not all systems use KNN.">
+        <div class="slide-header">
+          <div>
+            <div class="kicker">01 &bull; Foundations &amp; Scope</div>
+            <h2 class="slide-title">Everyday Intuition — Image Recognition vs. Classification</h2>
+          </div>
+          <span class="tag-pill">Big Picture</span>
+        </div>
+
+        <div class="slide-content">
+          <div class="card card-emerald" style="flex-direction:row; align-items:center; gap:18px;">
+            <div style="font-size:2.2rem;">🍎</div>
+            <div>
+              <h3>Everyday Analogy: Identifying an Unknown Fruit</h3>
+              <p>You pick up an unlabeled fruit and notice its <strong>round shape, smooth red skin, and palm-sized weight</strong>. Because those traits sit right next to <em>apples</em> in your memory—and far from bananas—you recognize it as an apple!</p>
             </div>
-            <p style="margin-top: 8px; font-size: 0.88rem;">Every visual feature contributes fairly inside a <code>Pipeline</code>.</p>
+          </div>
+
+          <div class="grid-2">
+            <div class="card card-cyan">
+              <h3>Image Recognition (Broad Umbrella)</h3>
+              <ul class="clean-list">
+                <li><strong>Classification:</strong> Assign one category label to a whole image.</li>
+                <li><strong>Object Detection:</strong> Locate &amp; box multiple objects (cars, pedestrians).</li>
+                <li><strong>Face Verification:</strong> Confirm identity (<code>1:1</code> unlock).</li>
+                <li><strong>Visual Search:</strong> Retrieve similar catalog items (Google Lens).</li>
+              </ul>
+            </div>
+
+            <div class="card card-indigo">
+              <h3>Image Classification (Our Core Task)</h3>
+              <div class="math-box">f(Image) &rarr; y &isin; {Digit 0, Digit 1, &hellip;, Digit 9}</div>
+              <p>Maps an input pixel grid to <strong>one predefined class label</strong> based on numerical visual patterns.</p>
+            </div>
+          </div>
+
+          <div class="callout callout-amber">
+            <strong>Important Perspective:</strong> Not every image recognition system uses KNN! Neural networks often classify via learned <code>Softmax</code> layers—while <strong>KNN</strong> offers a transparent, foundational way to classify directly from <strong>nearby feature representations</strong>.
           </div>
         </div>
-      </div>
-      <div class="slide-footer">
-        <span>KNN in Image Recognition &bull; Dept. of CSE, WUB</span>
-        <span>Slide 10 / 14</span>
-      </div>
-    </section>
 
-    <!-- ==================== SLIDE 11: PYTHON IMPLEMENTATION ==================== -->
-    <section class="slide" data-title="Python Implementation">
-      <div class="slide-header">
-        <div>
-          <div class="slide-kicker">Scikit-Learn Pipeline</div>
-          <h2 class="slide-title">Python Implementation for Handwritten Digits</h2>
+        <div class="slide-footer">
+          <span>Image Recognition via Nearby Feature Representations</span>
+          <span>Slide 02 / 17</span>
         </div>
-        <span class="slide-badge">Code Example</span>
-      </div>
-      <div class="slide-body">
-        <div class="grid-2-weighted">
-<pre class="code-block"><span class="kw">from</span> sklearn <span class="kw">import</span> datasets
-<span class="kw">from</span> sklearn.model_selection <span class="kw">import</span> train_test_split
-<span class="kw">from</span> sklearn.preprocessing <span class="kw">import</span> StandardScaler
-<span class="kw">from</span> sklearn.pipeline <span class="kw">import</span> make_pipeline
-<span class="kw">from</span> sklearn.neighbors <span class="kw">import</span> KNeighborsClassifier
+      </section>
 
-<span class="cm"># 1. Load 1,797 digit images (each 8x8 -> 64-D vector)</span>
-digits = datasets.<span class="fn">load_digits</span>()
-X_train, X_test, y_train, y_test = <span class="fn">train_test_split</span>(
-    digits.data, digits.target, test_size=<span class="num">0.25</span>, random_state=<span class="num">42</span>
-)
+      <!-- ==================== SLIDE 3: PIXELS, RGB & MATRICES ==================== -->
+      <section class="slide" data-cue="Contrast human perception (curves/shapes) with computer memory: 2D matrix (H x W) for grayscale, 3 stacked channels (H x W x 3) for RGB color.">
+        <div class="slide-header">
+          <div>
+            <div class="kicker">02 &bull; Numerical Representation</div>
+            <h2 class="slide-title">How Computers See Images — Pixels, RGB Channels &amp; Matrices</h2>
+          </div>
+          <span class="tag-pill">Arrays &amp; Tensors</span>
+        </div>
 
-<span class="cm"># 2. Build Pipeline: Feature Scaling + KNN (K=3)</span>
-model = <span class="fn">make_pipeline</span>(
-    <span class="fn">StandardScaler</span>(),
-    <span class="fn">KNeighborsClassifier</span>(n_neighbors=<span class="num">3</span>, metric=<span class="str">"euclidean"</span>)
-)
+        <div class="slide-content">
+          <div class="grid-2">
+            <!-- Left: Grayscale 8x8 Digit 0 Matrix -->
+            <div class="card card-cyan">
+              <h3>1. Grayscale Image = 2D Matrix (H &times; W)</h3>
+              <p>Each cell (<strong>pixel</strong>) stores light/ink intensity—e.g. <code>0..255</code> (8-bit) or <code>0..16</code> in Scikit-learn's <code>8&times;8</code> digits:</p>
+              <div class="pixel-matrix-8" id="digitZeroMatrix" aria-label="8x8 pixel matrix of digit 0"></div>
+              <p style="text-align:center; font-size:0.76rem; color:var(--text-muted);">Shape: <code>(8, 8)</code> &rarr; <strong>64 numbers</strong> trace the oval ring of Digit 0</p>
+            </div>
 
-<span class="cm"># 3. Fit (store feature representations) &amp; Predict</span>
-model.<span class="fn">fit</span>(X_train, y_train)
-accuracy = model.<span class="fn">score</span>(X_test, y_test)
-<span class="fn">print</span>(<span class="str">f"Test Accuracy: {accuracy:.2%}"</span>)</pre>
+            <!-- Right: Color RGB 3D Tensor -->
+            <div class="card card-purple">
+              <h3>2. Color Image = 3D RGB Tensor (H &times; W &times; 3)</h3>
+              <p>Color photos stack three intensity matrices—<strong>Red</strong>, <strong>Green</strong>, and <strong>Blue</strong>—each in <code>[0, 255]</code>:</p>
+              <svg viewBox="0 0 320 155" width="100%" style="margin:auto 0;">
+                <!-- Blue layer -->
+                <rect x="122" y="14" width="105" height="85" rx="6" fill="rgba(59,130,246,0.22)" stroke="#3b82f6" stroke-width="1.8"/>
+                <text x="208" y="30" fill="#60a5fa" font-size="10" font-weight="bold">B</text>
+                <!-- Green layer -->
+                <rect x="92" y="34" width="105" height="85" rx="6" fill="rgba(52,211,153,0.22)" stroke="#34d399" stroke-width="1.8"/>
+                <text x="178" y="50" fill="#34d399" font-size="10" font-weight="bold">G</text>
+                <!-- Red layer -->
+                <rect x="62" y="54" width="105" height="85" rx="6" fill="rgba(251,113,133,0.25)" stroke="#fb7185" stroke-width="1.8"/>
+                <text x="74" y="72" fill="#fb7185" font-size="10" font-weight="bold">R (0..255)</text>
+                <text x="114" y="103" fill="#f8fafc" font-size="10" font-family="monospace" text-anchor="middle">[255, 99, 71]</text>
+                <text x="268" y="85" fill="#cbd5e1" font-size="9.5" text-anchor="middle">32&times;32 RGB</text>
+                <text x="268" y="101" fill="#38bdf8" font-size="11" font-weight="bold" text-anchor="middle">= 3,072</text>
+                <text x="268" y="115" fill="#94a3b8" font-size="9" text-anchor="middle">numbers!</text>
+              </svg>
+              <p style="font-size:0.78rem; color:var(--text-muted);">Full HD photo (<code>1920&times;1080&times;3</code>) = <strong>6,220,800</strong> raw numbers!</p>
+            </div>
+          </div>
+        </div>
 
-          <div style="display: flex; flex-direction: column; gap: 14px;">
-            <div class="card card-blue">
-              <h3>Why Use <code>make_pipeline()</code>?</h3>
-              <p>Fits <code>StandardScaler</code> <strong>only</strong> on <code>X_train</code> and applies the same scaling to <code>X_test</code>, preventing data leakage.</p>
+        <div class="slide-footer">
+          <span>Image Recognition via Nearby Feature Representations</span>
+          <span>Slide 03 / 17</span>
+        </div>
+      </section>
+
+      <!-- ==================== SLIDE 4: IMAGE FEATURES & FEATURE EXTRACTION ==================== -->
+      <section class="slide" data-cue="Ask: How would you describe '0' vs '1' over the phone? Loops, center ink, vertical strokes—not reading 64 dots! Define x = phi(I).">
+        <div class="slide-header">
+          <div>
+            <div class="kicker">03 &bull; Visual Clues</div>
+            <h2 class="slide-title">What Are Image Features &amp; Feature Extraction?</h2>
+          </div>
+          <span class="tag-pill">x = &phi;(I)</span>
+        </div>
+
+        <div class="slide-content">
+          <div class="math-box">
+            Raw Image Matrix <strong>I</strong> &nbsp;&mdash;&mdash;&rarr;&nbsp; Feature Extractor <strong>&phi;(I)</strong> &nbsp;&mdash;&mdash;&rarr;&nbsp; Feature Vector <strong>x = [x&#8321;, x&#8322;, &hellip;, x<sub>d</sub>]</strong>
+          </div>
+
+          <div class="grid-3">
+            <div class="card card-cyan">
+              <h3>Low-Level Features</h3>
+              <ul class="clean-list">
+                <li>Individual pixel intensities</li>
+                <li>Regional average brightness</li>
+                <li>RGB color channel histograms</li>
+              </ul>
             </div>
             <div class="card card-indigo">
-              <h3>Inspect Nearest Images</h3>
-              <p>Use <code>knn.kneighbors(query_img)</code> to retrieve the exact distances and indices of the closest training images for visual verification.</p>
+              <h3>Structural Features</h3>
+              <ul class="clean-list">
+                <li>Edge orientations ($0^\circ, 45^\circ, 90^\circ$)</li>
+                <li>Closed loop vs. open stroke</li>
+                <li>Horizontal / vertical symmetry</li>
+              </ul>
             </div>
             <div class="card card-emerald">
-              <h3>Typical Result</h3>
-              <p>On the 64-D Digits dataset, KNN achieves <strong>~97–98% test accuracy</strong> with zero iterative weight training!</p>
+              <h3>Semantic Features</h3>
+              <ul class="clean-list">
+                <li>Textures, eyes, wheel spokes</li>
+                <li>Facial geometry landmarks</li>
+                <li>Whole-object parts (learned by CNNs)</li>
+              </ul>
             </div>
           </div>
-        </div>
-      </div>
-      <div class="slide-footer">
-        <span>KNN in Image Recognition &bull; Dept. of CSE, WUB</span>
-        <span>Slide 11 / 14</span>
-      </div>
-    </section>
 
-    <!-- ==================== SLIDE 12: CHOOSING THE VALUE OF K (INTERACTIVE) ==================== -->
-    <section class="slide" data-title="Choosing K (Interactive)">
-      <div class="slide-header">
-        <div>
-          <div class="slide-kicker">Hyperparameter Tuning</div>
-          <h2 class="slide-title">Choosing the Value of K (Interactive Demo)</h2>
+          <div class="callout">
+            <strong>Why Extract Features?</strong> Good feature extraction amplifies <em>class-separating structure</em> (like loops vs. vertical bars) while suppressing irrelevant variations (like dim paper lighting or minor shifts).
+          </div>
         </div>
-        <span class="slide-badge">Interactive</span>
-      </div>
-      <div class="slide-body">
-        <div class="grid-2-weighted">
+
+        <div class="slide-footer">
+          <span>Image Recognition via Nearby Feature Representations</span>
+          <span>Slide 04 / 17</span>
+        </div>
+      </section>
+
+      <!-- ==================== SLIDE 5: THREE LEVELS OF FEATURE REPRESENTATION ==================== -->
+      <section class="slide" data-cue="Crucial conceptual distinction! Contrast Raw Pixels vs Handcrafted Features (HOG/SIFT) vs Deep Learning Embeddings (CNN).">
+        <div class="slide-header">
           <div>
-            <div class="k-btn-group" role="group" aria-label="Select value of K">
-              <button type="button" class="k-btn" data-k="1">K = 1 (Small)</button>
-              <button type="button" class="k-btn active" data-k="3">K = 3 (Balanced)</button>
-              <button type="button" class="k-btn" data-k="5">K = 5 (Large)</button>
+            <div class="kicker">04 &bull; Representation Hierarchy</div>
+            <h2 class="slide-title">Feature Vectors &amp; Three Levels of Representation</h2>
+          </div>
+          <span class="tag-pill">Core Distinction</span>
+        </div>
+
+        <div class="slide-content">
+          <div class="grid-3">
+            <div class="card card-amber">
+              <h3>1. Raw Pixel Vectors</h3>
+              <p>Unroll every pixel row-by-row directly into a flat 1D array:</p>
+              <div class="math-box" style="font-size:0.8rem;">8&times;8 &rarr; x &isin; &#8477;<sup>64</sup></div>
+              <ul class="clean-list">
+                <li>Zero manual feature design.</li>
+                <li>Works on tiny centered digits.</li>
+                <li><strong>Fragile:</strong> 1-pixel shift breaks pixel alignment!</li>
+              </ul>
             </div>
 
-            <div class="card" id="kStatusCard" style="background: var(--bg-tint-blue); border-color: #93c5fd; margin-bottom: 14px;">
-              <h3 id="kStatusTitle">K = 3 &rarr; Balanced Prediction: Digit 0</h3>
-              <p id="kStatusDesc">Includes 2 Digit 0 neighbors and 1 noisy Digit 1 neighbor. Majority vote ignores the single outlier and classifies correctly as <strong>Digit 0</strong>.</p>
-              <div style="margin-top: 10px; display: flex; gap: 10px; flex-wrap: wrap;">
-                <span class="pill pill-blue" id="kVote0">Digit 0 Votes: 2</span>
-                <span class="pill pill-amber" id="kVote1">Digit 1 Votes: 1</span>
-                <span class="pill pill-emerald" id="kPredPill">Prediction: Digit 0</span>
+            <div class="card card-cyan">
+              <h3>2. Handcrafted Features</h3>
+              <p>Human-designed math capturing edges, shapes &amp; color histograms:</p>
+              <div class="math-box" style="font-size:0.8rem;">HOG / SIFT / Symmetry</div>
+              <ul class="clean-list">
+                <li>Captures stroke angles &amp; loops.</li>
+                <li>Tolerates small shifts &amp; dimming.</li>
+                <li><strong>Limit:</strong> Hard to hand-code for complex 3D scenes.</li>
+              </ul>
+            </div>
+
+            <div class="card card-emerald">
+              <h3>3. Deep CNN Embeddings</h3>
+              <p>Compact semantic vectors learned automatically by neural networks:</p>
+              <div class="math-box" style="font-size:0.8rem;">CNN(I) &rarr; e &isin; &#8477;<sup>128..512</sup></div>
+              <ul class="clean-list">
+                <li>Encodes high-level visual meaning.</li>
+                <li>Invariant to pose, scale &amp; clutter.</li>
+                <li>Powers modern Face ID &amp; Lens!</li>
+              </ul>
+            </div>
+          </div>
+
+          <div class="callout callout-emerald">
+            <strong>Statistical Bridge — PCA:</strong> Principal Component Analysis compresses correlated raw pixels (e.g. <code>64-D &rarr; 24-D</code>, keeping <code>92.6%</code> variance) by dropping uninformative blank border pixels.
+          </div>
+        </div>
+
+        <div class="slide-footer">
+          <span>Image Recognition via Nearby Feature Representations</span>
+          <span>Slide 05 / 17</span>
+        </div>
+      </section>
+
+      <!-- ==================== SLIDE 6: FEATURE SPACE & DIMENSIONALITY ==================== -->
+      <section class="slide" data-cue="Every image becomes ONE coordinate point in d-dimensional Feature Space! Explain cluster intuition and the Curse of Dimensionality.">
+        <div class="slide-header">
+          <div>
+            <div class="kicker">05 &bull; Geometric Intuition</div>
+            <h2 class="slide-title">Feature Space &amp; Dimensionality</h2>
+          </div>
+          <span class="tag-pill">Points in &#8477;<sup>d</sup></span>
+        </div>
+
+        <div class="slide-content">
+          <div class="grid-2-wide">
+            <div style="display:flex; flex-direction:column; gap:12px; justify-content:center;">
+              <div class="card card-cyan">
+                <h3>1 Image = 1 Coordinate Point</h3>
+                <ul class="clean-list">
+                  <li><strong>2-D Space:</strong> <code>[x&#8321;, x&#8322;]</code> plots on a flat X–Y plane.</li>
+                  <li><strong>3-D Space:</strong> <code>[3, 6, 4]</code> sits in a 3D room.</li>
+                  <li><strong>64-D / 512-D Space:</strong> Same algebra scales to any dimension <code>d</code>!</li>
+                </ul>
+              </div>
+              <div class="card card-rose">
+                <h3>Curse of Dimensionality</h3>
+                <p>With millions of raw pixels (<code>d = 10<sup>6</sup></code>), space grows exponentially sparse and noisy background pixels make all pairwise distances look nearly equal!</p>
               </div>
             </div>
 
-            <ul class="styled-list" style="gap: 8px;">
-              <li><span class="bullet-num" style="background: var(--rose);">!</span><div><strong>Small K:</strong> Sensitive to noise &amp; atypical handwriting; prone to <strong>overfitting</strong>.</div></li>
-              <li><span class="bullet-num" style="background: var(--amber);">~</span><div><strong>Large K:</strong> Smooths boundaries, but can cross into neighboring digit clusters and <strong>underfit</strong>.</div></li>
-              <li><span class="bullet-num" style="background: var(--emerald);">&check;</span><div><strong>Best Practice:</strong> Select K using validation data / cross-validation; use an <strong>odd K</strong> for binary problems.</div></li>
-            </ul>
+            <!-- 2D PCA Cluster Diagram -->
+            <div class="card" style="justify-content:center; align-items:center; background:rgba(7,11,22,0.9);">
+              <svg viewBox="0 0 320 220" width="100%">
+                <line x1="34" y1="192" x2="300" y2="192" stroke="#475569" stroke-width="1.5"/>
+                <line x1="34" y1="192" x2="34" y2="18" stroke="#475569" stroke-width="1.5"/>
+                <text x="168" y="212" fill="#94a3b8" font-size="9.5" text-anchor="middle">PCA Component 1</text>
+                <text x="12" y="105" fill="#94a3b8" font-size="9.5" text-anchor="middle" transform="rotate(-90 12 105)">PCA Component 2</text>
+
+                <!-- Cluster ellipses -->
+                <ellipse cx="92" cy="66" rx="42" ry="30" fill="rgba(56,189,248,0.12)" stroke="#38bdf8" stroke-dasharray="4,3"/>
+                <text x="92" y="30" fill="#38bdf8" font-size="9.5" font-weight="bold" text-anchor="middle">Cluster: Digit 0</text>
+                <circle cx="76" cy="60" r="5" fill="#38bdf8"/><circle cx="96" cy="54" r="5" fill="#38bdf8"/>
+                <circle cx="108" cy="72" r="5" fill="#38bdf8"/><circle cx="85" cy="78" r="5" fill="#38bdf8"/>
+
+                <ellipse cx="238" cy="146" rx="44" ry="28" fill="rgba(251,191,36,0.12)" stroke="#fbbf24" stroke-dasharray="4,3"/>
+                <text x="238" y="110" fill="#fbbf24" font-size="9.5" font-weight="bold" text-anchor="middle">Cluster: Digit 1</text>
+                <circle cx="220" cy="142" r="5" fill="#fbbf24"/><circle cx="245" cy="138" r="5" fill="#fbbf24"/>
+                <circle cx="256" cy="154" r="5" fill="#fbbf24"/><circle cx="232" cy="158" r="5" fill="#fbbf24"/>
+
+                <ellipse cx="185" cy="58" rx="38" ry="25" fill="rgba(52,211,153,0.12)" stroke="#34d399" stroke-dasharray="4,3"/>
+                <text x="185" y="26" fill="#34d399" font-size="9.5" font-weight="bold" text-anchor="middle">Cluster: Digit 6</text>
+                <circle cx="174" cy="55" r="5" fill="#34d399"/><circle cx="196" cy="52" r="5" fill="#34d399"/>
+                <circle cx="186" cy="68" r="5" fill="#34d399"/>
+              </svg>
+              <p style="font-size:0.76rem; color:var(--text-muted); text-align:center;">Similar images naturally cluster in nearby regions!</p>
+            </div>
+          </div>
+        </div>
+
+        <div class="slide-footer">
+          <span>Image Recognition via Nearby Feature Representations</span>
+          <span>Slide 06 / 17</span>
+        </div>
+      </section>
+
+      <!-- ==================== SLIDE 7: DISTANCE & SIMILARITY ==================== -->
+      <section class="slide" data-cue="Contrast Euclidean Distance (ruler gap; sensitive to brightness doubling) vs Cosine Similarity (angle theta; lighting-invariant!). Mention Feature Scaling.">
+        <div class="slide-header">
+          <div>
+            <div class="kicker">06 &bull; Mathematical Rulers</div>
+            <h2 class="slide-title">Measuring Closeness — Euclidean Distance &amp; Cosine Similarity</h2>
+          </div>
+          <span class="tag-pill">Metrics</span>
+        </div>
+
+        <div class="slide-content">
+          <div class="grid-2">
+            <div class="card card-cyan">
+              <h3>Euclidean Distance (L&#8322; Straight-Line Gap)</h3>
+              <div class="math-box">d<sub>Euc</sub>(a, b) = &radic;<span style="text-decoration:overline;">&nbsp;&Sigma;<sub>i=1..d</sub> (a<sub>i</sub> &minus; b<sub>i</sub>)&sup2;&nbsp;</span></div>
+              <ul class="clean-list">
+                <li><strong>Smaller = Closer</strong> (<code>0.0</code> means identical vectors).</li>
+                <li>Squares differences so <code>&minus;2</code> and <code>+2</code> never cancel out.</li>
+                <li>Great when absolute intensities &amp; scales match.</li>
+              </ul>
+            </div>
+
+            <div class="card card-emerald">
+              <h3>Cosine Similarity (Directional Alignment)</h3>
+              <div class="math-box">sim<sub>cos</sub>(a, b) = cos(&theta;) = (a &middot; b) / (&#8214;a&#8214; &#8214;b&#8214;)</div>
+              <ul class="clean-list">
+                <li><strong>Closer to 1.0 = More Similar</strong> (<code>&theta; = 0&deg;</code>).</li>
+                <li>Ignores vector length: dim <code>[3,6,4]</code> &amp; bright <code>[6,12,8]</code> score <strong>1.00</strong>!</li>
+                <li>Preferred for HOG gradients &amp; deep CNN embeddings.</li>
+              </ul>
+            </div>
           </div>
 
-          <!-- Interactive SVG Neighborhood Visualization -->
-          <div class="card" style="padding: 12px; text-align: center; background: #f8fafc;">
-            <div style="font-size: 0.85rem; font-weight: 700; margin-bottom: 4px;">Click K=1, K=3, or K=5 to Expand Neighbor Circle</div>
-            <svg viewBox="0 0 380 280" width="100%" height="auto" id="kDemoSvg">
-              <rect x="10" y="10" width="360" height="260" rx="10" fill="#ffffff" stroke="#cbd5e1" />
+          <!-- Visual Comparison SVG + Scaling Note -->
+          <div class="grid-2-wide" style="align-items:center;">
+            <div class="callout">
+              <strong>Feature Scaling Nuance:</strong> When combining multi-unit features (e.g. ink sum <code>0..1000</code> + symmetry <code>0..1</code>), apply <code>StandardScaler</code> (<code>z = (x &minus; &mu;)/&sigma;</code>) so large ranges don't dominate Euclidean distance!
+            </div>
+            <div class="card" style="padding:8px 14px; background:rgba(7,11,22,0.85);">
+              <svg viewBox="0 0 280 78" width="100%">
+                <!-- Euclidean -->
+                <line x1="18" y1="66" x2="55" y2="38" stroke="#94a3b8" stroke-width="1.5"/>
+                <line x1="18" y1="66" x2="108" y2="16" stroke="#94a3b8" stroke-width="1.5"/>
+                <line x1="55" y1="38" x2="108" y2="16" stroke="#38bdf8" stroke-width="2.2" stroke-dasharray="3,2"/>
+                <circle cx="55" cy="38" r="4" fill="#38bdf8"/><circle cx="108" cy="16" r="4" fill="#38bdf8"/>
+                <text x="76" y="46" fill="#38bdf8" font-size="9" font-weight="bold">d_Euc</text>
+                <!-- Cosine -->
+                <line x1="165" y1="66" x2="255" y2="20" stroke="#34d399" stroke-width="2"/>
+                <line x1="165" y1="66" x2="262" y2="54" stroke="#818cf8" stroke-width="2"/>
+                <path d="M 198 49 A 36 36 0 0 1 203 61" fill="none" stroke="#fbbf24" stroke-width="2"/>
+                <text x="215" y="57" fill="#fbbf24" font-size="10" font-weight="bold">&theta;</text>
+              </svg>
+            </div>
+          </div>
+        </div>
 
-              <!-- Dynamic Neighbor Radius Circle around Query (190, 140) -->
-              <circle id="kRadiusCircle" cx="190" cy="140" r="86" fill="rgba(37, 99, 235, 0.11)" stroke="#2563eb" stroke-width="2.2" stroke-dasharray="6,4" style="transition: r 0.35s ease;" />
+        <div class="slide-footer">
+          <span>Image Recognition via Nearby Feature Representations</span>
+          <span>Slide 07 / 17</span>
+        </div>
+      </section>
 
-              <!-- Neighbor #1: Noisy Digit 1 near query (162, 120) dist=34 -->
-              <line x1="190" y1="140" x2="162" y2="120" stroke="#94a3b8" stroke-width="1.5" stroke-dasharray="3,2" />
-              <rect x="153" y="111" width="18" height="18" rx="4" fill="#f59e0b" stroke="#0f172a" stroke-width="1.5" />
-              <text x="162" y="104" text-anchor="middle" font-size="10" fill="#b45309" font-weight="700">#1 (1)</text>
+      <!-- ==================== SLIDE 8: KNN ALGORITHM ==================== -->
+      <section class="slide" data-cue="Explain lazy/instance-based learning (.fit stores vectors; .predict searches neighbors) and walk through the 5 steps + Majority Vote.">
+        <div class="slide-header">
+          <div>
+            <div class="kicker">07 &bull; Neighborhood Classification</div>
+            <h2 class="slide-title">K-Nearest Neighbors (KNN) — How Nearby Vectors Decide</h2>
+          </div>
+          <span class="tag-pill">Lazy Learner</span>
+        </div>
 
-              <!-- Neighbor #2: Digit 0 (238, 104) dist=60 -->
-              <line id="lineK2" x1="190" y1="140" x2="238" y2="104" stroke="#94a3b8" stroke-width="1.5" stroke-dasharray="3,2" />
-              <circle cx="238" cy="104" r="10" fill="#2563eb" stroke="#0f172a" stroke-width="1.5" />
-              <text x="238" y="88" text-anchor="middle" font-size="10" fill="#1e40af" font-weight="700">#2 (0)</text>
+        <div class="slide-content">
+          <div class="grid-2-wide">
+            <div class="card card-indigo" style="justify-content:center;">
+              <h3>The 5-Step KNN Classification Pipeline</h3>
+              <ol style="padding-left:20px; display:flex; flex-direction:column; gap:8px; color:var(--text-secondary); font-size:clamp(0.8rem, 0.98vw, 0.92rem); line-height:1.45;">
+                <li><strong>Store Labeled Vectors:</strong> Save training pairs <code>(x<sub>i</sub>, y<sub>i</sub>)</code> in memory (<em>no weight matrix training!</em>).</li>
+                <li><strong>Choose Hyperparameter K:</strong> e.g. <code>K = 3</code> neighbors.</li>
+                <li><strong>Measure Closeness:</strong> Compute distance from <code>x<sub>query</sub></code> to every training vector.</li>
+                <li><strong>Select Top-K Neighbors:</strong> Pick the <code>K</code> smallest distances.</li>
+                <li><strong>Majority Vote:</strong> Predict the most frequent class (or weight votes by <code>1 / d</code>).</li>
+              </ol>
+            </div>
 
-              <!-- Neighbor #3: Digit 0 (145, 200) dist=75 -->
-              <line id="lineK3" x1="190" y1="140" x2="145" y2="200" stroke="#94a3b8" stroke-width="1.5" stroke-dasharray="3,2" />
-              <circle cx="145" cy="200" r="10" fill="#2563eb" stroke="#0f172a" stroke-width="1.5" />
-              <text x="145" y="222" text-anchor="middle" font-size="10" fill="#1e40af" font-weight="700">#3 (0)</text>
+            <div style="display:flex; flex-direction:column; gap:12px; justify-content:center;">
+              <div class="math-box">
+                &ycirc; = argmax<sub>c</sub> &Sigma;<sub>i &isin; N<sub>K</sub>(x)</sub> &#120128;(y<sub>i</sub> = c)
+              </div>
+              <div class="card card-emerald">
+                <h3>Why Nearby Representations Work</h3>
+                <p>Without assuming straight-line boundaries, KNN naturally carves out <strong>flexible nonlinear decision regions</strong> around any visual cluster shape!</p>
+              </div>
+            </div>
+          </div>
+        </div>
 
-              <!-- Neighbor #4: Digit 1 (280, 194) dist=105 -->
-              <line id="lineK4" x1="190" y1="140" x2="280" y2="194" stroke="#94a3b8" stroke-width="1.5" stroke-dasharray="3,2" opacity="0.2" />
-              <rect x="271" y="185" width="18" height="18" rx="4" fill="#f59e0b" stroke="#0f172a" stroke-width="1.5" />
-              <text x="280" y="218" text-anchor="middle" font-size="10" fill="#b45309" font-weight="700">#4 (1)</text>
+        <div class="slide-footer">
+          <span>Image Recognition via Nearby Feature Representations</span>
+          <span>Slide 08 / 17</span>
+        </div>
+      </section>
 
-              <!-- Neighbor #5: Digit 1 (290, 74) dist=120 -->
-              <line id="lineK5" x1="190" y1="140" x2="290" y2="74" stroke="#94a3b8" stroke-width="1.5" stroke-dasharray="3,2" opacity="0.2" />
-              <rect x="281" y="65" width="18" height="18" rx="4" fill="#f59e0b" stroke="#0f172a" stroke-width="1.5" />
-              <text x="290" y="57" text-anchor="middle" font-size="10" fill="#b45309" font-weight="700">#5 (1)</text>
+      <!-- ==================== SLIDE 9: WORKED MATHEMATICAL EXAMPLE ==================== -->
+      <section class="slide" data-cue="Walk through Image B (d=1.00, cos=0.9972) and Image A (d=2.45) step by step! Point out Cell 7 in Colab verifies these exact numbers.">
+        <div class="slide-header">
+          <div>
+            <div class="kicker">08 &bull; Hand-Verified Calculation</div>
+            <h2 class="slide-title">Step-by-Step Worked Example (Digit 0 vs. Digit 1)</h2>
+          </div>
+          <span class="tag-pill">Query x = [3, 6, 4] &bull; K = 3</span>
+        </div>
 
-              <!-- Query Image '?' -->
-              <circle cx="190" cy="140" r="13" fill="#e11d48" stroke="#ffffff" stroke-width="2.5" />
-              <text x="190" y="145" text-anchor="middle" font-size="14" fill="#ffffff" font-weight="800">?</text>
+        <div class="slide-content">
+          <p style="font-size:0.84rem; color:var(--text-secondary);">
+            Features (0–10 scale): <code>x&#8321; = Center Ink</code>, <code>x&#8322; = Loop Score</code>, <code>x&#8323; = Vertical Stroke</code> &nbsp;|&nbsp; Unknown Query: <code>x<sub>query</sub> = [3, 6, 4]</code>
+          </p>
+
+          <div class="grid-2-wide" style="align-items:center;">
+            <div class="card" style="padding:10px 14px;">
+              <table class="data-table">
+                <thead>
+                  <tr>
+                    <th>Sample</th>
+                    <th>Vector [x&#8321;,x&#8322;,x&#8323;]</th>
+                    <th>Class</th>
+                    <th>Euclidean d</th>
+                    <th>Cosine Sim</th>
+                  </tr>
+                </thead>
+                <tbody>
+                  <tr class="highlight-row">
+                    <td><strong>Image B (#1)</strong></td>
+                    <td><code>[3, 7, 4]</code></td>
+                    <td>Digit 0</td>
+                    <td><strong>1.0000</strong></td>
+                    <td><strong>0.9972</strong></td>
+                  </tr>
+                  <tr class="highlight-row">
+                    <td><strong>Image A (#2)</strong></td>
+                    <td><code>[2, 8, 3]</code></td>
+                    <td>Digit 0</td>
+                    <td><strong>2.4495</strong></td>
+                    <td><strong>0.9630</strong></td>
+                  </tr>
+                  <tr class="highlight-row">
+                    <td><strong>Image D (#3)</strong></td>
+                    <td><code>[7, 3, 8]</code></td>
+                    <td>Digit 1</td>
+                    <td><strong>6.4031</strong></td>
+                    <td><strong>0.8230</strong></td>
+                  </tr>
+                  <tr>
+                    <td>Image C</td>
+                    <td><code>[8, 2, 9]</code></td>
+                    <td>Digit 1</td>
+                    <td>8.1240</td>
+                    <td>0.7552</td>
+                  </tr>
+                  <tr>
+                    <td>Image E</td>
+                    <td><code>[9, 1, 9]</code></td>
+                    <td>Digit 1</td>
+                    <td>9.2736</td>
+                    <td>0.6920</td>
+                  </tr>
+                </tbody>
+              </table>
+            </div>
+
+            <div style="display:flex; flex-direction:column; gap:10px;">
+              <div class="card card-cyan">
+                <h3>Sample Math (Query vs. A)</h3>
+                <div class="math-box" style="font-size:0.78rem;">
+                  &radic;((3&minus;2)&sup2; + (6&minus;8)&sup2; + (4&minus;3)&sup2;)<br/>
+                  = &radic;(1 + 4 + 1) = &radic;6 &approx; <strong>2.4495</strong>
+                </div>
+              </div>
+              <div class="card card-emerald">
+                <h3>Top K = 3 Vote Result</h3>
+                <p>Neighbors: <strong>B (0)</strong>, <strong>A (0)</strong>, <strong>D (1)</strong><br/>
+                Tally: <strong>2 votes Digit 0</strong> vs. 1 vote Digit 1<br/>
+                <span style="color:var(--emerald); font-weight:800;">&rArr; Final Prediction: Digit 0!</span></p>
+              </div>
+            </div>
+          </div>
+        </div>
+
+        <div class="slide-footer">
+          <span>Image Recognition via Nearby Feature Representations</span>
+          <span>Slide 09 / 17</span>
+        </div>
+      </section>
+
+      <!-- ==================== SLIDE 10: TRAINING, TESTING & EVALUATION ==================== -->
+      <section class="slide" data-cue="Explain why testing on training data gives a fake 100% score at K=1! Highlight stratified 75/25 split, Pipeline leak prevention, and Confusion Matrix.">
+        <div class="slide-header">
+          <div>
+            <div class="kicker">09 &bull; Rigorous ML Workflow</div>
+            <h2 class="slide-title">Training, Testing &amp; Preventing Data Leakage</h2>
+          </div>
+          <span class="tag-pill">Generalization</span>
+        </div>
+
+        <div class="slide-content">
+          <!-- Pipeline Flow Diagram -->
+          <div class="grid-4">
+            <div class="card card-cyan">
+              <h3>1. Stratified Split</h3>
+              <p><strong>75% Train</strong> (1,347 imgs) stored as neighbors; <strong>25% Test</strong> (450 imgs) locked away unseen.</p>
+            </div>
+            <div class="card card-indigo">
+              <h3>2. Leak-Free Fit</h3>
+              <p>Fit <code>PCA</code> or <code>Scaler</code> <strong>only on X_train</strong> inside a Scikit-learn <code>Pipeline</code>.</p>
+            </div>
+            <div class="card card-emerald">
+              <h3>3. Test Accuracy</h3>
+              <p>Fraction of unseen test queries predicted accurately: <code>Correct / Total</code>.</p>
+            </div>
+            <div class="card card-amber">
+              <h3>4. Confusion Matrix</h3>
+              <p><code>10&times;10</code> grid exposing exact visual mix-ups (e.g., narrow <code>8</code> vs. <code>1</code>).</p>
+            </div>
+          </div>
+
+          <div class="callout callout-amber">
+            <strong>Beginner Trap — Why Never Evaluate on Training Images?</strong> With <code>K = 1</code>, every stored training image sits at distance <code>0.0</code> from itself—giving a fake <strong>100% training score</strong> even on pure random noise! Always evaluate on held-out unseen images.
+          </div>
+        </div>
+
+        <div class="slide-footer">
+          <span>Image Recognition via Nearby Feature Representations</span>
+          <span>Slide 10 / 17</span>
+        </div>
+      </section>
+
+      <!-- ==================== SLIDE 11: INTERACTIVE K EXPLORER ==================== -->
+      <section class="slide" data-cue="CLICK K=1, K=3, K=5, K=7 LIVE! Show K=1 fooled by noisy orange outlier (Overfitting), K=3/5 sweet spot, K=7 pulling distant points (Underfitting).">
+        <div class="slide-header">
+          <div>
+            <div class="kicker">10 &bull; Hyperparameter Tuning</div>
+            <h2 class="slide-title">Choosing K — Interactive Neighborhood Explorer</h2>
+          </div>
+          <span class="tag-pill">Click K Live!</span>
+        </div>
+
+        <div class="slide-content">
+          <div class="grid-2-wide" style="align-items:center;">
+            <!-- Interactive SVG Canvas -->
+            <div class="card" style="background:rgba(7,11,22,0.92); padding:12px;">
+              <svg id="kExplorerSvg" viewBox="0 0 360 210" width="100%">
+                <line x1="28" y1="190" x2="340" y2="190" stroke="#334155" stroke-width="1.5"/>
+                <line x1="28" y1="190" x2="28" y2="15" stroke="#334155" stroke-width="1.5"/>
+
+                <!-- Dynamic Radius Circle -->
+                <circle id="kRadiusCircle" cx="150" cy="102" r="56" fill="rgba(56,189,248,0.13)" stroke="#38bdf8" stroke-width="2" stroke-dasharray="5,4" style="transition: r 0.3s ease, stroke 0.3s ease;"/>
+
+                <!-- Neighbor #1 (Noisy Outlier Digit 1 very close: dist ~24px) -->
+                <circle cx="164" cy="84" r="7.5" fill="#fbbf24" stroke="#fff" stroke-width="1"/>
+                <text x="164" y="87" fill="#050811" font-size="8.5" font-weight="bold" text-anchor="middle">1</text>
+
+                <!-- Neighbor #2 & #3 (True local cluster Digit 0: dist ~38px, 46px) -->
+                <circle cx="120" cy="82" r="7.5" fill="#38bdf8"/>
+                <text x="120" y="85" fill="#050811" font-size="8.5" font-weight="bold" text-anchor="middle">0</text>
+                <circle cx="122" cy="132" r="7.5" fill="#38bdf8"/>
+                <text x="122" y="135" fill="#050811" font-size="8.5" font-weight="bold" text-anchor="middle">0</text>
+
+                <!-- Neighbor #4 & #5 (Digit 0: dist ~64px, 70px) -->
+                <circle cx="94" cy="96" r="7.5" fill="#38bdf8"/>
+                <text x="94" y="99" fill="#050811" font-size="8.5" font-weight="bold" text-anchor="middle">0</text>
+                <circle cx="144" cy="40" r="7.5" fill="#38bdf8"/>
+                <text x="144" y="43" fill="#050811" font-size="8.5" font-weight="bold" text-anchor="middle">0</text>
+
+                <!-- Distant Digit 1 Cluster (#6, #7, etc. when K grows too large!) -->
+                <circle cx="232" cy="128" r="7.5" fill="#fbbf24"/>
+                <text x="232" y="131" fill="#050811" font-size="8.5" font-weight="bold" text-anchor="middle">1</text>
+                <circle cx="242" cy="95" r="7.5" fill="#fbbf24"/>
+                <text x="242" y="98" fill="#050811" font-size="8.5" font-weight="bold" text-anchor="middle">1</text>
+                <circle cx="255" cy="152" r="7.5" fill="#fbbf24"/>
+                <text x="255" y="155" fill="#050811" font-size="8.5" font-weight="bold" text-anchor="middle">1</text>
+                <circle cx="278" cy="122" r="7.5" fill="#fbbf24"/>
+                <text x="278" y="125" fill="#050811" font-size="8.5" font-weight="bold" text-anchor="middle">1</text>
+
+                <!-- Query Point -->
+                <circle cx="150" cy="102" r="9.5" fill="#fb7185" stroke="#ffffff" stroke-width="2"/>
+                <text x="150" y="106" fill="#ffffff" font-size="11" font-weight="bold" text-anchor="middle">?</text>
+              </svg>
+            </div>
+
+            <!-- Interactive Controls & Live Readout -->
+            <div style="display:flex; flex-direction:column; gap:12px;">
+              <div class="k-btn-group">
+                <button class="k-btn" onclick="setKDemo(1)">K = 1 (Overfit)</button>
+                <button class="k-btn active" onclick="setKDemo(3)">K = 3 (Sweet Spot)</button>
+                <button class="k-btn" onclick="setKDemo(5)">K = 5 (Robust)</button>
+                <button class="k-btn" onclick="setKDemo(7)">K = 7 (Too Wide)</button>
+              </div>
+
+              <div class="card card-cyan" id="kStatusCard">
+                <h3 id="kStatusTitle">K = 3 &bull; Optimal Local Consensus</h3>
+                <p id="kStatusVote"><strong>Votes:</strong> 2 &times; Digit 0 vs. 1 &times; Digit 1 &rarr; <strong style="color:var(--emerald);">Predicted: Digit 0</strong></p>
+                <p id="kStatusDesc">Smooths out the single noisy orange outlier while staying tightly inside the local Digit 0 neighborhood!</p>
+              </div>
+
+              <div class="callout" style="font-size:0.78rem;">
+                <strong>Rule of Thumb:</strong> Tune odd <code>K &isin; {3, 5, 7}</code> via cross-validation; use <code>weights='distance'</code> to break multi-class ties cleanly.
+              </div>
+            </div>
+          </div>
+        </div>
+
+        <div class="slide-footer">
+          <span>Image Recognition via Nearby Feature Representations</span>
+          <span>Slide 11 / 17</span>
+        </div>
+      </section>
+
+      <!-- ==================== SLIDE 12: PRACTICAL COLAB BENCHMARK ==================== -->
+      <section class="slide" data-cue="Walk through our verified Colab numbers: 98.44% (443/450) on unseen digits, 24-D PCA matching 98.44%, and why 7 ambiguous digits (like narrow 8 -> 1) missed.">
+        <div class="slide-header">
+          <div>
+            <div class="kicker">11 &bull; Empirical Results (Colab Verified)</div>
+            <h2 class="slide-title">Practical Classification Demo — Scikit-learn Digits</h2>
+          </div>
+          <span class="tag-pill">1,797 Images (8&times;8)</span>
+        </div>
+
+        <div class="slide-content">
+          <div class="grid-3">
+            <div class="card card-emerald" style="text-align:center;">
+              <div style="font-size:2.1rem; font-weight:800; color:var(--emerald);">98.44%</div>
+              <h3 style="justify-content:center;">Unseen Test Accuracy</h3>
+              <p><strong>443 / 450</strong> test digits right at <code>K = 3</code> (both Euclidean &amp; Cosine!)</p>
+            </div>
+            <div class="card card-cyan" style="text-align:center;">
+              <div style="font-size:2.1rem; font-weight:800; color:var(--cyan);">24-D PCA</div>
+              <h3 style="justify-content:center;">62% Smaller Vector</h3>
+              <p>Matches <strong>98.44%</strong> accuracy while cutting <code>64</code> pixels down to <code>24</code> components!</p>
+            </div>
+            <div class="card card-amber" style="text-align:center;">
+              <div style="font-size:2.1rem; font-weight:800; color:var(--amber);">Only 7</div>
+              <h3 style="justify-content:center;">Total Test Errors</h3>
+              <p>3 errors are pinched, narrow <code>8</code>s whose closest neighbors look like upright <code>1</code>s.</p>
+            </div>
+          </div>
+
+          <div class="card" style="padding:12px 16px;">
+            <h3>K-Sweep Benchmark Across 450 Unseen Test Digits (<code>image-recognition-demo.ipynb</code>)</h3>
+            <table class="data-table">
+              <thead>
+                <tr>
+                  <th>Neighborhood K</th>
+                  <th>K = 1</th>
+                  <th>K = 3 (Selected)</th>
+                  <th>K = 5</th>
+                  <th>K = 9</th>
+                  <th>K = 15</th>
+                  <th>K = 21</th>
+                </tr>
+              </thead>
+              <tbody>
+                <tr>
+                  <td><strong>Test Accuracy (Euclidean)</strong></td>
+                  <td>98.44%</td>
+                  <td><strong style="color:var(--emerald);">98.44%</strong></td>
+                  <td>98.44%</td>
+                  <td>97.56%</td>
+                  <td>96.89%</td>
+                  <td>96.00%</td>
+                </tr>
+              </tbody>
+            </table>
+          </div>
+        </div>
+
+        <div class="slide-footer">
+          <span>Image Recognition via Nearby Feature Representations</span>
+          <span>Slide 12 / 17</span>
+        </div>
+      </section>
+
+      <!-- ==================== SLIDE 13: LIMITATIONS OF TRADITIONAL REPRESENTATIONS ==================== -->
+      <section class="slide" data-cue="Dramatic reveal from Section 14 of our Colab notebook: shifting test digits JUST 1 PIXEL RIGHT + 40% brightness crashes Raw Pixels from 98.44% to 52.00%!">
+        <div class="slide-header">
+          <div>
+            <div class="kicker">12 &bull; Where Pixels Break</div>
+            <h2 class="slide-title">Limitations of Traditional Pixel &amp; Handcrafted Features</h2>
+          </div>
+          <span class="tag-pill">Stress Test</span>
+        </div>
+
+        <div class="slide-content">
+          <div class="grid-2">
+            <!-- Dramatic Colab Bar Comparison -->
+            <div class="card card-rose">
+              <h3>Colab Stress Test: +1px Shift &amp; 40% Dimming</h3>
+              <p>Humans read shifted digits effortlessly—yet pixel-by-pixel Euclidean matching collapses:</p>
+              <div style="display:flex; flex-direction:column; gap:10px; margin-top:6px;">
+                <div>
+                  <div style="display:flex; justify-content:space-between; font-size:0.8rem; margin-bottom:3px;">
+                    <span>Raw Pixels (64-D, Clean Test)</span><strong style="color:var(--cyan);">98.44%</strong>
+                  </div>
+                  <div style="height:10px; background:#1e293b; border-radius:99px; overflow:hidden;"><div style="width:98.4%; height:100%; background:var(--cyan);"></div></div>
+                </div>
+                <div>
+                  <div style="display:flex; justify-content:space-between; font-size:0.8rem; margin-bottom:3px;">
+                    <span>Raw Pixels (+1px Right &amp; Dimmed)</span><strong style="color:var(--rose);">52.00% 💥</strong>
+                  </div>
+                  <div style="height:10px; background:#1e293b; border-radius:99px; overflow:hidden;"><div style="width:52%; height:100%; background:var(--rose);"></div></div>
+                </div>
+                <div>
+                  <div style="display:flex; justify-content:space-between; font-size:0.8rem; margin-bottom:3px;">
+                    <span>Aligned + Edge HOG + Cosine (+1px &amp; Dim)</span><strong style="color:var(--emerald);">98.00% ✓</strong>
+                  </div>
+                  <div style="height:10px; background:#1e293b; border-radius:99px; overflow:hidden;"><div style="width:98%; height:100%; background:var(--emerald);"></div></div>
+                </div>
+              </div>
+            </div>
+
+            <div class="card card-amber">
+              <h3>5 Real-World Challenges Beyond Digits</h3>
+              <ul class="clean-list">
+                <li><strong>Translation &amp; Rotation:</strong> Shifting 2px misaligns grid indices.</li>
+                <li><strong>Scale &amp; 3D Viewpoint:</strong> Close-up vs. side-profile object.</li>
+                <li><strong>Illumination Shifts:</strong> Shadows &amp; exposure alter RGB values.</li>
+                <li><strong>Background Clutter:</strong> Grass/sky dominates 70% of pixels (CIFAR-10 raw pixel KNN &approx; <code>34%</code>!).</li>
+                <li><strong>Query Latency:</strong> Brute-force KNN costs <code>O(N &middot; d)</code> per photo.</li>
+              </ul>
+            </div>
+          </div>
+        </div>
+
+        <div class="slide-footer">
+          <span>Image Recognition via Nearby Feature Representations</span>
+          <span>Slide 13 / 17</span>
+        </div>
+      </section>
+
+      <!-- ==================== SLIDE 14: ENTER CNNS & DEEP EMBEDDINGS ==================== -->
+      <section class="slide" data-cue="Explain how CNNs learn hierarchical features automatically (Edges -> Parts -> Whole Objects -> 512-D Embedding), used with either Softmax OR Nearest-Neighbor search!">
+        <div class="slide-header">
+          <div>
+            <div class="kicker">13 &bull; Modern Computer Vision</div>
+            <h2 class="slide-title">Enter Deep Learning — CNNs &amp; Feature Embeddings</h2>
+          </div>
+          <span class="tag-pill">Learned Representations</span>
+        </div>
+
+        <div class="slide-content">
+          <!-- CNN Architecture SVG Pipeline -->
+          <div class="card" style="background:rgba(7,11,22,0.9); padding:14px;">
+            <svg viewBox="0 0 680 135" width="100%">
+              <!-- Input -->
+              <rect x="12" y="25" width="76" height="82" rx="8" fill="#172554" stroke="#38bdf8" stroke-width="1.6"/>
+              <text x="50" y="62" fill="#f8fafc" font-size="10.5" font-weight="bold" text-anchor="middle">RGB Photo</text>
+              <text x="50" y="78" fill="#93c5fd" font-size="9" text-anchor="middle">224&times;224&times;3</text>
+              <text x="103" y="70" fill="#64748b" font-size="16">&rarr;</text>
+
+              <!-- Early Conv -->
+              <rect x="120" y="30" width="96" height="72" rx="8" fill="#1e1b4b" stroke="#818cf8" stroke-width="1.6"/>
+              <text x="168" y="60" fill="#e0e7ff" font-size="10" font-weight="bold" text-anchor="middle">Early Conv</text>
+              <text x="168" y="77" fill="#a5b4fc" font-size="8.8" text-anchor="middle">Edges &amp; Blobs</text>
+              <text x="230" y="70" fill="#64748b" font-size="16">&rarr;</text>
+
+              <!-- Mid/Deep Conv -->
+              <rect x="246" y="35" width="106" height="62" rx="8" fill="#2e1065" stroke="#c084fc" stroke-width="1.6"/>
+              <text x="299" y="61" fill="#f3e8ff" font-size="10" font-weight="bold" text-anchor="middle">Deep Conv</text>
+              <text x="299" y="77" fill="#d8b4fe" font-size="8.8" text-anchor="middle">Textures &amp; Parts</text>
+              <text x="366" y="70" fill="#64748b" font-size="16">&rarr;</text>
+
+              <!-- Embedding Vector -->
+              <rect x="382" y="22" width="110" height="88" rx="10" fill="rgba(52,211,153,0.16)" stroke="#34d399" stroke-width="2"/>
+              <text x="437" y="52" fill="#34d399" font-size="10.5" font-weight="bold" text-anchor="middle">CNN Embedding</text>
+              <text x="437" y="69" fill="#f8fafc" font-size="9.5" font-family="monospace" text-anchor="middle">e &isin; &#8477;<sup>512</sup></text>
+              <text x="437" y="86" fill="#a7f3d0" font-size="8.5" text-anchor="middle">Pose/Light Invariant</text>
+
+              <!-- Two Output Heads -->
+              <line x1="492" y1="50" x2="526" y2="34" stroke="#38bdf8" stroke-width="1.6"/>
+              <line x1="492" y1="82" x2="526" y2="98" stroke="#fbbf24" stroke-width="1.6"/>
+
+              <rect x="528" y="14" width="140" height="42" rx="7" fill="#0f172a" stroke="#38bdf8" stroke-width="1.4"/>
+              <text x="598" y="32" fill="#38bdf8" font-size="9.5" font-weight="bold" text-anchor="middle">A) Softmax Head</text>
+              <text x="598" y="46" fill="#cbd5e1" font-size="8.2" text-anchor="middle">Closed-set classes</text>
+
+              <rect x="528" y="76" width="140" height="44" rx="7" fill="#0f172a" stroke="#fbbf24" stroke-width="1.4"/>
+              <text x="598" y="94" fill="#fbbf24" font-size="9.5" font-weight="bold" text-anchor="middle">B) KNN / Cosine Search</text>
+              <text x="598" y="109" fill="#cbd5e1" font-size="8.2" text-anchor="middle">Face ID &amp; Visual Search!</text>
             </svg>
           </div>
-        </div>
-      </div>
-      <div class="slide-footer">
-        <span>KNN in Image Recognition &bull; Dept. of CSE, WUB</span>
-        <span>Slide 12 / 14</span>
-      </div>
-    </section>
 
-    <!-- ==================== SLIDE 13: ADVANTAGES, LIMITATIONS & APPLICATIONS ==================== -->
-    <section class="slide" data-title="Advantages & Applications">
-      <div class="slide-header">
-        <div>
-          <div class="slide-kicker">Evaluation &amp; Impact</div>
-          <h2 class="slide-title">Advantages, Limitations &amp; Image Applications</h2>
-        </div>
-        <span class="slide-badge">Trade-Offs</span>
-      </div>
-      <div class="slide-body">
-        <div class="grid-2">
-          <div class="card card-emerald">
-            <h3>Advantages in Image Recognition</h3>
-            <ul class="styled-list" style="gap: 8px; margin-top: 8px;">
-              <li>&bull; Simple, intuitive, and explains <em>why</em> an image got its label (shows nearest images).</li>
-              <li>&bull; Zero training cost—new image categories can be added instantly.</li>
-              <li>&bull; Naturally handles multi-class image datasets and nonlinear boundaries.</li>
-            </ul>
-          </div>
-          <div class="card card-rose">
-            <h3>Limitations in Image Recognition</h3>
-            <ul class="styled-list" style="gap: 8px; margin-top: 8px;">
-              <li>&bull; Slow prediction on millions of images (requires vector indexes like FAISS / KD-Tree).</li>
-              <li>&bull; Sensitive to feature scaling, shifts, and irrelevant background pixels.</li>
-              <li>&bull; Raw pixels suffer in very high dimensions (extract PCA/CNN embeddings first!).</li>
-            </ul>
-          </div>
-        </div>
-
-        <div class="card" style="background: #f8fafc;">
-          <h3 style="margin-bottom: 10px;">Real-World Image Applications</h3>
-          <div style="display: grid; grid-template-columns: repeat(4, 1fr); gap: 12px;">
-            <div style="background:#fff; padding:12px; border-radius:10px; border:1px solid var(--border);">
-              <strong style="color:var(--primary); display:block; margin-bottom:4px;">Handwritten OCR</strong>
-              <span style="font-size:0.84rem; color:var(--text-secondary);">Recognizing postal codes, digits &amp; checks.</span>
+          <div class="grid-2">
+            <div class="card card-emerald">
+              <h3>Why CNN Embeddings Excel</h3>
+              <p>Sliding convolutional filters + pooling map photos of the same dog—on grass, carpet, bright or dim—to <strong>tightly clustered nearby points</strong> in <code>&#8477;<sup>512</sup></code>!</p>
             </div>
-            <div style="background:#fff; padding:12px; border-radius:10px; border:1px solid var(--border);">
-              <strong style="color:var(--primary); display:block; margin-bottom:4px;">Face Verification</strong>
-              <span style="font-size:0.84rem; color:var(--text-secondary);">Matching 128-D face embeddings to enrolled IDs.</span>
-            </div>
-            <div style="background:#fff; padding:12px; border-radius:10px; border:1px solid var(--border);">
-              <strong style="color:var(--primary); display:block; margin-bottom:4px;">Visual Product Search</strong>
-              <span style="font-size:0.84rem; color:var(--text-secondary);">Finding similar clothes or items from photos.</span>
-            </div>
-            <div style="background:#fff; padding:12px; border-radius:10px; border:1px solid var(--border);">
-              <strong style="color:var(--primary); display:block; margin-bottom:4px;">Medical Retrieval</strong>
-              <span style="font-size:0.84rem; color:var(--text-secondary);">Retrieving similar X-ray or biopsy cases.</span>
+            <div class="card card-cyan">
+              <h3>Contrastive &amp; Triplet Training</h3>
+              <p>Models like <strong>FaceNet</strong> &amp; <strong>CLIP</strong> explicitly train embeddings so matching concepts maximize <strong>Cosine similarity</strong> while non-matches push apart.</p>
             </div>
           </div>
         </div>
-      </div>
-      <div class="slide-footer">
-        <span>KNN in Image Recognition &bull; Dept. of CSE, WUB</span>
-        <span>Slide 13 / 14</span>
-      </div>
-    </section>
 
-    <!-- ==================== SLIDE 14: SUMMARY & THANK YOU ==================== -->
-    <section class="slide slide-hero" data-title="Summary & Thank You">
-      <div style="max-width: 920px; width: 100%;">
-        <div style="font-size: 0.82rem; font-weight: 700; text-transform: uppercase; letter-spacing: 0.08em; color: #7dd3fc; margin-bottom: 10px;">
-          Key Takeaways &amp; Practice
+        <div class="slide-footer">
+          <span>Image Recognition via Nearby Feature Representations</span>
+          <span>Slide 14 / 17</span>
         </div>
-        <h2 style="font-size: 2.35rem; font-weight: 800; margin-bottom: 22px;">Summary &amp; Student Exercise</h2>
+      </section>
 
-        <div class="grid-2" style="margin-bottom: 26px;">
-          <div style="background: rgba(255,255,255,0.08); border: 1px solid rgba(255,255,255,0.18); border-radius: 14px; padding: 20px;">
-            <h3 style="color: #7dd3fc; margin-bottom: 10px; font-size: 1.05rem;">Core Takeaways</h3>
-            <ul style="list-style: none; display: flex; flex-direction: column; gap: 8px; color: #e2e8f0; font-size: 0.94rem; line-height: 1.5;">
-              <li>&#10003; Convert images into scaled numerical feature vectors.</li>
-              <li>&#10003; Measure similarity with Euclidean distance in feature space.</li>
-              <li>&#10003; Predict labels via majority vote of the K nearest images.</li>
-              <li>&#10003; Compact embeddings (PCA / CNN) outperform raw pixels.</li>
-            </ul>
-          </div>
-
-          <div style="background: rgba(255,255,255,0.08); border: 1px solid rgba(255,255,255,0.18); border-radius: 14px; padding: 20px;">
-            <h3 style="color: #fde68a; margin-bottom: 10px; font-size: 1.05rem;">Student Exercise (Try in Colab!)</h3>
-            <p style="color: #e2e8f0; font-size: 0.94rem; line-height: 1.55;">
-              1. Using Slide 8–9's mystery image <code>X<sub>new</sub> = (3, 6, 4)</code>, verify the predicted digit for <strong>K = 1</strong> and <strong>K = 5</strong>.<br />
-              2. Open <code>KNN_Image_Recognition_Colab.ipynb</code> and compare <code>metric="euclidean"</code> vs. <code>metric="manhattan"</code>.
-            </p>
-          </div>
-        </div>
-
-        <div style="display: flex; align-items: center; justify-content: space-between; border-top: 1px solid rgba(255,255,255,0.2); padding-top: 22px; gap: 16px; flex-wrap: wrap;">
+      <!-- ==================== SLIDE 15: EVOLUTION SUMMARY MATRIX ==================== -->
+      <section class="slide" data-cue="Synthesize all three representation levels on one clean comparison matrix. Emphasize: better features align math distance with human visual similarity!">
+        <div class="slide-header">
           <div>
-            <div style="font-size: 2rem; font-weight: 800; color: #ffffff;">Thank You!</div>
-            <div style="font-size: 0.96rem; color: #cbd5e1;">Questions &amp; Discussion</div>
+            <div class="kicker">14 &bull; Synthesis</div>
+            <h2 class="slide-title">Evolution Summary — Three Generations of Features</h2>
           </div>
-          <div style="text-align: right; font-size: 0.88rem; color: #cbd5e1; line-height: 1.55;">
-            <strong style="color: #fde68a;">Presented by:</strong> MD Azadur Rahman (4478) &bull; Rakib Hossain (4056) &bull; Aduri Akter (4032)<br />
-            <strong style="color: #ffffff;">Course Teacher: Ahsan Ullah</strong> &bull; Assistant Professor, Dept. of CSE, World University of Bangladesh
+          <span class="tag-pill">Side-by-Side</span>
+        </div>
+
+        <div class="slide-content">
+          <div class="card" style="padding:12px 16px;">
+            <table class="data-table">
+              <thead>
+                <tr>
+                  <th>Dimension</th>
+                  <th>1. Raw Pixel Vectors</th>
+                  <th>2. Handcrafted (HOG / SIFT)</th>
+                  <th>3. Deep CNN Embeddings</th>
+                </tr>
+              </thead>
+              <tbody>
+                <tr>
+                  <td><strong>How Extracted</strong></td>
+                  <td>Direct matrix flattening</td>
+                  <td>Human-engineered math formulas</td>
+                  <td>Learned end-to-end from data</td>
+                </tr>
+                <tr>
+                  <td><strong>Typical Dimension (d)</strong></td>
+                  <td><code>64</code> to <code>1,000,000+</code></td>
+                  <td><code>64</code> to <code>4,096</code></td>
+                  <td>Compact <code>128</code> to <code>1,024</code></td>
+                </tr>
+                <tr>
+                  <td><strong>Shift &amp; Lighting Tolerance</strong></td>
+                  <td style="color:var(--rose);">Poor (breaks on 1px shift)</td>
+                  <td style="color:var(--amber);">Moderate to High</td>
+                  <td style="color:var(--emerald);"><strong>Excellent (Semantic)</strong></td>
+                </tr>
+                <tr>
+                  <td><strong>Background Clutter</strong></td>
+                  <td style="color:var(--rose);">Fails on natural scenes</td>
+                  <td style="color:var(--amber);">Limited on complex backgrounds</td>
+                  <td style="color:var(--emerald);"><strong>High invariance</strong></td>
+                </tr>
+                <tr>
+                  <td><strong>Preferred Metric</strong></td>
+                  <td>Euclidean (<code>L&#8322;</code>)</td>
+                  <td>Cosine / Euclidean</td>
+                  <td><strong>Cosine Similarity</strong></td>
+                </tr>
+                <tr>
+                  <td><strong>Sweet-Spot Use Case</strong></td>
+                  <td>Tiny aligned icons / digits</td>
+                  <td>Fast CPU inspection / OCR</td>
+                  <td>Face ID, Visual Search, Medical AI</td>
+                </tr>
+              </tbody>
+            </table>
+          </div>
+
+          <div class="callout callout-emerald">
+            <strong>Core Principle:</strong> Nearest-neighbor matching never became obsolete—upgrading from raw pixels to deep embeddings made <em>"nearby in vector space"</em> truly mean <em>"visually &amp; semantically alike."</em>
           </div>
         </div>
-      </div>
-      <div class="slide-footer">
-        <span>KNN in Image Recognition</span>
-        <span>Slide 14 / 14</span>
-      </div>
-    </section>
 
-  </main>
+        <div class="slide-footer">
+          <span>Image Recognition via Nearby Feature Representations</span>
+          <span>Slide 15 / 17</span>
+        </div>
+      </section>
 
-  <!-- Floating Navigation Controls -->
-  <nav class="controls-bar" aria-label="Slide navigation">
-    <button type="button" class="nav-btn" id="prevBtn">&larr; Prev</button>
-    <select class="slide-select" id="slideSelect" aria-label="Jump to slide"></select>
-    <button type="button" class="nav-btn" id="nextBtn">Next &rarr;</button>
-    <button type="button" class="nav-btn" id="fsBtn" title="Toggle Fullscreen (F)">&#x26F6;</button>
-    <span class="kbd-hint">Keys: &larr; / &rarr; / Space / F</span>
-  </nav>
+      <!-- ==================== SLIDE 16: REAL-WORLD APPLICATIONS ==================== -->
+      <section class="slide" data-cue="Highlight why production AI loves embedding + nearest neighbors: register new faces/products instantly WITHOUT retraining neural networks! Mention FAISS/HNSW.">
+        <div class="slide-header">
+          <div>
+            <div class="kicker">15 &bull; Industry Impact</div>
+            <h2 class="slide-title">Real-World Applications of Nearby Feature Representations</h2>
+          </div>
+          <span class="tag-pill">Production AI</span>
+        </div>
+
+        <div class="slide-content">
+          <div class="grid-2">
+            <div class="card card-cyan">
+              <h3>🔐 Face Verification (Face ID / ArcFace)</h3>
+              <p>Enrolling your face stores a <code>512-D</code> embedding on-device—unlocking checks Cosine similarity in milliseconds with <strong>zero network retraining</strong>.</p>
+            </div>
+            <div class="card card-indigo">
+              <h3>🛍️ Visual Search (Google Lens / Pinterest)</h3>
+              <p>Snap a sneaker or chair &rarr; CNN extracts embedding &rarr; retrieves the <code>K</code> closest catalog products across millions of listings.</p>
+            </div>
+            <div class="card card-emerald">
+              <h3>🩺 Medical Case Retrieval</h3>
+              <p>Doctors query a biopsy or lung CT patch to inspect the <strong>K = 5 closest historical patient scans</strong> with confirmed outcomes.</p>
+            </div>
+            <div class="card card-amber">
+              <h3>⚡ Billion-Scale Vector DBs (FAISS / Milvus)</h3>
+              <p><strong>Approximate Nearest Neighbor (ANN / HNSW)</strong> indexes find nearby embeddings among <code>100M+</code> images in <strong>&lt; 10 ms</strong>!</p>
+            </div>
+          </div>
+        </div>
+
+        <div class="slide-footer">
+          <span>Image Recognition via Nearby Feature Representations</span>
+          <span>Slide 16 / 17</span>
+        </div>
+      </section>
+
+      <!-- ==================== SLIDE 17: TAKEAWAYS & LIVE COLAB DEMO ==================== -->
+      <section class="slide" data-cue="Summarize the 4 pillars crisply, invite questions, and transition directly into running image-recognition-demo.ipynb in Google Colab!">
+        <div class="slide-header">
+          <div>
+            <div class="kicker">16 &bull; Summary &amp; Hands-On Lab</div>
+            <h2 class="slide-title">Key Takeaways &amp; Live Google Colab Demonstration</h2>
+          </div>
+          <span class="tag-pill">Let's Run Code!</span>
+        </div>
+
+        <div class="slide-content">
+          <div class="grid-2">
+            <div class="card card-cyan">
+              <h3>4 Core Lecture Takeaways</h3>
+              <ul class="clean-list">
+                <li><strong>Images = Tensors:</strong> <code>H&times;W</code> grayscale or <code>H&times;W&times;3</code> RGB mapped to points in <strong>Feature Space</strong>.</li>
+                <li><strong>Math of Closeness:</strong> <strong>Euclidean</strong> measures point gap; <strong>Cosine</strong> measures angle independent of brightness.</li>
+                <li><strong>KNN Consensus:</strong> Balanced <code>K = 3..5</code> avoids <code>K = 1</code> noise overfitting &amp; large-<code>K</code> underfitting.</li>
+                <li><strong>Features Rule:</strong> Raw pixels crash on a 1px shift (<code>52%</code>); Edge HOG (<code>98%</code>) &amp; <strong>CNN Embeddings</strong> unlock real-world vision!</li>
+              </ul>
+            </div>
+
+            <div class="card card-emerald">
+              <h3>Live Notebook: <code>image-recognition-demo.ipynb</code></h3>
+              <ul class="clean-list">
+                <li>Inspect <code>8&times;8</code> numeric matrices &amp; 3-channel RGB tensors.</li>
+                <li>Visualize 2D PCA digit clusters &amp; verify our Slide 9 math.</li>
+                <li>Evaluate <code>98.44%</code> accuracy, Confusion Matrix &amp; Top-5 Neighbors.</li>
+                <li>Run the <strong>+1px Shift Stress Test</strong> &amp; <strong>Upload Your Own Digit Image</strong>!</li>
+              </ul>
+              <div class="math-box" style="margin-top:auto; border-color:rgba(52,211,153,0.4); color:var(--emerald);">
+                Thank You! &bull; Questions &amp; Live Demo Time
+              </div>
+            </div>
+          </div>
+        </div>
+
+        <div class="slide-footer">
+          <span>Companion Files: topic-explanation.md &bull; speaker-script.md &bull; image-recognition-demo.ipynb</span>
+          <span>Slide 17 / 17</span>
+        </div>
+      </section>
+
+    </main>
+
+    <!-- Optional Presenter Cue Drawer -->
+    <aside class="notes-drawer" id="notesDrawer" aria-live="polite">
+      <h4>Presenter Cue (Full Script in speaker-script.md)</h4>
+      <p id="notesText"></p>
+    </aside>
+
+    <!-- Navigation Controls -->
+    <nav class="deck-controls" aria-label="Slide navigation">
+      <button class="ctrl-btn" id="prevBtn" title="Previous Slide (Left Arrow)">&larr; Prev</button>
+      <span class="slide-counter" id="slideCounter">01 / 17</span>
+      <button class="ctrl-btn" id="nextBtn" title="Next Slide (Right Arrow)">Next &rarr;</button>
+      <button class="ctrl-btn" id="notesBtn" title="Toggle Quick Cue (N)">Cue</button>
+      <button class="ctrl-btn" id="fsBtn" title="Toggle Fullscreen (F)">&#x26F6; Fullscreen</button>
+    </nav>
+  </div>
 
   <script>
-    (function () {
-      const slides = Array.from(document.querySelectorAll(".slide"));
-      const prevBtn = document.getElementById("prevBtn");
-      const nextBtn = document.getElementById("nextBtn");
-      const fsBtn = document.getElementById("fsBtn");
-      const slideSelect = document.getElementById("slideSelect");
-      const progressFill = document.getElementById("progressFill");
-      let current = 0;
+    // 1. Render real sklearn Digit '0' (index 0) 8x8 pixel matrix on Slide 3
+    const digitZeroPixels = [
+      0, 0,  5, 13,  9,  1, 0, 0,
+      0, 0, 13, 15, 10, 15, 5, 0,
+      0, 3, 15,  2,  0, 11, 8, 0,
+      0, 4, 12,  0,  0,  8, 8, 0,
+      0, 5,  8,  0,  0,  9, 8, 0,
+      0, 4, 11,  0,  1, 12, 7, 0,
+      0, 2, 14,  5, 10, 12, 0, 0,
+      0, 0,  6, 13, 10,  0, 0, 0
+    ];
+    const matrixEl = document.getElementById("digitZeroMatrix");
+    digitZeroPixels.forEach((val) => {
+      const cell = document.createElement("div");
+      cell.className = "px-cell";
+      const alpha = (val / 16).toFixed(2);
+      cell.style.background = val === 0
+        ? "rgba(15, 23, 42, 0.85)"
+        : `rgba(56, 189, 248, ${0.18 + 0.82 * (val / 16)})`;
+      cell.style.color = val >= 9 ? "#050811" : (val === 0 ? "#475569" : "#e0f2fe");
+      cell.textContent = val;
+      matrixEl.appendChild(cell);
+    });
 
-      // Populate slide dropdown
-      slides.forEach((slide, idx) => {
-        const opt = document.createElement("option");
-        opt.value = idx;
-        opt.textContent = `${idx + 1}. ${slide.dataset.title || "Slide " + (idx + 1)}`;
-        slideSelect.appendChild(opt);
-      });
-
-      function showSlide(index) {
-        if (index < 0) index = 0;
-        if (index >= slides.length) index = slides.length - 1;
-        slides[current].classList.remove("active");
-        current = index;
-        slides[current].classList.add("active");
-
-        slideSelect.value = String(current);
-        prevBtn.disabled = current === 0;
-        nextBtn.disabled = current === slides.length - 1;
-        progressFill.style.width = `${((current + 1) / slides.length) * 100}%`;
+    // 2. Interactive K-Explorer on Slide 11
+    const kPresets = {
+      1: {
+        r: 28,
+        color: "#fb7185",
+        title: "K = 1 • High Variance (Overfitting Risk!)",
+        vote: "<strong>Votes:</strong> 0 &times; Digit 0 vs. 1 &times; Digit 1 &rarr; <strong style='color:var(--rose)'>Predicted: Digit 1 (Wrong!)</strong>",
+        desc: "Trapped by a single noisy/mislabeled orange outlier sitting right beside our query point!"
+      },
+      3: {
+        r: 50,
+        color: "#38bdf8",
+        title: "K = 3 • Optimal Local Consensus",
+        vote: "<strong>Votes:</strong> 2 &times; Digit 0 vs. 1 &times; Digit 1 &rarr; <strong style='color:var(--emerald)'>Predicted: Digit 0 (Correct!)</strong>",
+        desc: "Smooths out the single noisy orange outlier while staying tightly inside the local Digit 0 neighborhood!"
+      },
+      5: {
+        r: 72,
+        color: "#34d399",
+        title: "K = 5 • Strong Noise-Resistant Consensus",
+        vote: "<strong>Votes:</strong> 4 &times; Digit 0 vs. 1 &times; Digit 1 &rarr; <strong style='color:var(--emerald)'>Predicted: Digit 0 (Correct!)</strong>",
+        desc: "Four clean Digit 0 neighbors comfortably outvote the single noisy point."
+      },
+      7: {
+        r: 108,
+        color: "#fbbf24",
+        title: "K = 7+ • Over-Smoothing (Underfitting Risk!)",
+        vote: "<strong>Votes:</strong> 4 &times; Digit 0 vs. 3 &times; Digit 1 (and flips if K grows further!)",
+        desc: "Radius stretches far into the rival Digit 1 cluster on the right, blurring the true class boundary."
       }
+    };
 
-      prevBtn.addEventListener("click", () => showSlide(current - 1));
-      nextBtn.addEventListener("click", () => showSlide(current + 1));
-      slideSelect.addEventListener("change", (e) => showSlide(Number(e.target.value)));
-
-      fsBtn.addEventListener("click", () => {
-        if (!document.fullscreenElement) {
-          document.documentElement.requestFullscreen().catch(() => {});
-        } else {
-          document.exitFullscreen().catch(() => {});
-        }
+    function setKDemo(k) {
+      const cfg = kPresets[k];
+      const circle = document.getElementById("kRadiusCircle");
+      circle.setAttribute("r", cfg.r);
+      circle.setAttribute("stroke", cfg.color);
+      document.getElementById("kStatusTitle").textContent = cfg.title;
+      document.getElementById("kStatusVote").innerHTML = cfg.vote;
+      document.getElementById("kStatusDesc").textContent = cfg.desc;
+      document.querySelectorAll(".k-btn").forEach((btn, idx) => {
+        const btnK = [1, 3, 5, 7][idx];
+        btn.classList.toggle("active", btnK === k);
       });
+    }
 
-      document.addEventListener("keydown", (e) => {
-        if (e.target.tagName === "SELECT" || e.target.tagName === "INPUT") return;
-        if (e.key === "ArrowRight" || e.key === " ") {
-          e.preventDefault();
-          showSlide(current + 1);
-        } else if (e.key === "ArrowLeft") {
-          e.preventDefault();
-          showSlide(current - 1);
-        } else if (e.key === "Home") {
-          e.preventDefault();
-          showSlide(0);
-        } else if (e.key === "End") {
-          e.preventDefault();
-          showSlide(slides.length - 1);
-        } else if (e.key === "f" || e.key === "F") {
-          fsBtn.click();
-        }
-      });
+    // 3. Slide Deck Navigation, Progress, Notes & Fullscreen
+    const slides = Array.from(document.querySelectorAll(".slide"));
+    const totalSlides = slides.length;
+    let currentIdx = 0;
 
-      // Interactive K=1 / K=3 / K=5 Simulator (Slide 12)
-      const kData = {
-        1: {
-          radius: 44,
-          title: "K = 1 \u2192 Overfits to Noise: Digit 1",
-          desc: "Only looks at the single nearest neighbor (#1), which happens to be a noisy Digit 1 outlier inside the Digit 0 region!",
-          v0: "Digit 0 Votes: 0",
-          v1: "Digit 1 Votes: 1",
-          pred: "Prediction: Digit 1 (Overfit!)",
-          predClass: "pill pill-rose",
-          cardBg: "#fff1f2",
-          cardBorder: "#fecdd3",
-          lines: [1, 0, 0, 0, 0]
-        },
-        3: {
-          radius: 86,
-          title: "K = 3 \u2192 Balanced Prediction: Digit 0",
-          desc: "Includes 2 Digit 0 neighbors and 1 noisy Digit 1 neighbor. Majority vote ignores the single outlier and classifies correctly as Digit 0.",
-          v0: "Digit 0 Votes: 2",
-          v1: "Digit 1 Votes: 1",
-          pred: "Prediction: Digit 0 (Optimal)",
-          predClass: "pill pill-emerald",
-          cardBg: "#eff6ff",
-          cardBorder: "#93c5fd",
-          lines: [1, 1, 1, 0, 0]
-        },
-        5: {
-          radius: 130,
-          title: "K = 5 \u2192 Underfits Boundary: Digit 1",
-          desc: "Expands too far and captures distant Digit 1 examples across the boundary, flipping the vote to 3 vs. 2.",
-          v0: "Digit 0 Votes: 2",
-          v1: "Digit 1 Votes: 3",
-          pred: "Prediction: Digit 1 (Underfit!)",
-          predClass: "pill pill-amber",
-          cardBg: "#fffbeb",
-          cardBorder: "#fde68a",
-          lines: [1, 1, 1, 1, 1]
-        }
-      };
+    const prevBtn = document.getElementById("prevBtn");
+    const nextBtn = document.getElementById("nextBtn");
+    const counterEl = document.getElementById("slideCounter");
+    const progressFill = document.getElementById("progressFill");
+    const notesDrawer = document.getElementById("notesDrawer");
+    const notesText = document.getElementById("notesText");
+    const notesBtn = document.getElementById("notesBtn");
+    const fsBtn = document.getElementById("fsBtn");
 
-      const kButtons = document.querySelectorAll(".k-btn");
-      const kRadiusCircle = document.getElementById("kRadiusCircle");
-      const kStatusCard = document.getElementById("kStatusCard");
-      const kStatusTitle = document.getElementById("kStatusTitle");
-      const kStatusDesc = document.getElementById("kStatusDesc");
-      const kVote0 = document.getElementById("kVote0");
-      const kVote1 = document.getElementById("kVote1");
-      const kPredPill = document.getElementById("kPredPill");
-      const lineEls = [
-        null,
-        document.getElementById("lineK2"),
-        document.getElementById("lineK3"),
-        document.getElementById("lineK4"),
-        document.getElementById("lineK5")
-      ];
+    function updateDeck(idx) {
+      currentIdx = Math.max(0, Math.min(totalSlides - 1, idx));
+      slides.forEach((s, i) => s.classList.toggle("active", i === currentIdx));
+      const numStr = String(currentIdx + 1).padStart(2, "0");
+      counterEl.textContent = `${numStr} / ${totalSlides}`;
+      progressFill.style.width = `${((currentIdx + 1) / totalSlides) * 100}%`;
+      prevBtn.disabled = currentIdx === 0;
+      nextBtn.disabled = currentIdx === totalSlides - 1;
+      notesText.textContent = slides[currentIdx].dataset.cue || "";
+    }
 
-      kButtons.forEach((btn) => {
-        btn.addEventListener("click", () => {
-          const k = Number(btn.dataset.k);
-          const cfg = kData[k];
-          kButtons.forEach((b) => b.classList.remove("active"));
-          btn.classList.add("active");
+    function toggleFullscreen() {
+      if (!document.fullscreenElement) {
+        document.documentElement.requestFullscreen().catch(() => {});
+      } else {
+        document.exitFullscreen().catch(() => {});
+      }
+    }
 
-          kRadiusCircle.setAttribute("r", cfg.radius);
-          kStatusTitle.textContent = cfg.title;
-          kStatusDesc.textContent = cfg.desc;
-          kVote0.textContent = cfg.v0;
-          kVote1.textContent = cfg.v1;
-          kPredPill.textContent = cfg.pred;
-          kPredPill.className = cfg.predClass;
-          kStatusCard.style.background = cfg.cardBg;
-          kStatusCard.style.borderColor = cfg.cardBorder;
+    prevBtn.addEventListener("click", () => updateDeck(currentIdx - 1));
+    nextBtn.addEventListener("click", () => updateDeck(currentIdx + 1));
+    notesBtn.addEventListener("click", () => notesDrawer.classList.toggle("open"));
+    fsBtn.addEventListener("click", toggleFullscreen);
 
-          for (let i = 1; i <= 4; i++) {
-            if (lineEls[i]) {
-              lineEls[i].setAttribute("opacity", cfg.lines[i] ? "1" : "0.18");
-            }
-          }
-        });
-      });
+    document.addEventListener("keydown", (e) => {
+      if (["ArrowRight", "ArrowDown", "PageDown", " "].includes(e.key)) {
+        e.preventDefault();
+        updateDeck(currentIdx + 1);
+      } else if (["ArrowLeft", "ArrowUp", "PageUp"].includes(e.key)) {
+        e.preventDefault();
+        updateDeck(currentIdx - 1);
+      } else if (e.key === "Home") {
+        e.preventDefault();
+        updateDeck(0);
+      } else if (e.key === "End") {
+        e.preventDefault();
+        updateDeck(totalSlides - 1);
+      } else if (e.key === "f" || e.key === "F") {
+        toggleFullscreen();
+      } else if (e.key === "n" || e.key === "N") {
+        notesDrawer.classList.toggle("open");
+      }
+    });
 
-      showSlide(0);
-    })();
+    updateDeck(0);
   </script>
 </body>
 </html>
