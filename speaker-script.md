@@ -12,8 +12,8 @@
 | Member | Roll / ID | Slides | Target Time |
 | :--- | :--- | :--- | :--- |
 | **Aduri Akter** | 4032 | Slides 1–5 | ~1m 40s |
-| **Azadur Rahman** | 4478 | Slides 6–10 | ~1m 40s |
-| **Md. Rakib Hossain** | 4056 | Slides 11–15 | ~1m 40s |
+| **Md. Rakib Hossain** | 4056 | Slides 6–10 | ~1m 40s |
+| **Azadur Rahman** | 4478 | Slides 11–15 | ~1m 40s |
 
 ### Opening Note (Before Slide 1)
 All three members stand together at the front. Keep `KNN Image Recognition.html` open in fullscreen (`F11`) so transitions are instant and smooth.
@@ -28,7 +28,7 @@ All three members stand together at the front. Keep `KNN Image Recognition.html`
 * **Approximate Speaking Time:** 15 seconds
 * **Exact Speaking Script:**
   > "Assalamu Alaikum, respected Sir Ahsan Ullah and dear classmates. Welcome to our Artificial Intelligence presentation on **Image Recognition: Classifying Images Based on Nearby Feature Representations**.
-  > I am Aduri Akter, ID 4032, presenting with Azadur Rahman, ID 4478, and Md. Rakib Hossain, ID 4056."
+  > I am Aduri Akter, ID 4032, presenting with Md. Rakib Hossain, ID 4056, and Azadur Rahman, ID 4478."
 * **Simple Explanation:** Introducing our team and how KNN recognizes images.
 * **Analogy:** Applying one simple rule—comparing with closest neighbors—to identify pictures.
 * **Transition to Slide 2:**
@@ -41,7 +41,7 @@ All three members stand together at the front. Keep `KNN Image Recognition.html`
 * **Main Objective:** Briefly outline the flow of the presentation across the three speakers.
 * **Approximate Speaking Time:** 15 seconds
 * **Exact Speaking Script:**
-  > "First, I will explain image recognition, feature vectors, and the core idea of K-Nearest Neighbors. Second, Azadur Rahman will walk through the KNN steps, distance math, and a fruit-sorting example. Finally, Md. Rakib Hossain will cover parameter tuning, applications, and key takeaways."
+  > "First, I will explain image recognition, feature vectors, and the core idea of K-Nearest Neighbors. Second, Md. Rakib Hossain will walk through the KNN steps, distance math, and a fruit-sorting example. Finally, Azadur Rahman will cover parameter tuning, applications, and key takeaways."
 * **Simple Explanation:** Our three-part roadmap: Concept → Step-by-Step Example → Tuning & Applications.
 * **Analogy:** A three-stop tour from how computers see pixels to real-world AI systems.
 * **Transition to Slide 3:**
@@ -80,18 +80,18 @@ All three members stand together at the front. Keep `KNN Image Recognition.html`
 * **Main Objective:** Introduce KNN's three pillars (K, Distance, Majority Vote) and note that it is a lazy learner.
 * **Approximate Speaking Time:** 25 seconds
 * **Exact Speaking Script:**
-  > "**K-Nearest Neighbors (KNN)** is a supervised machine learning algorithm built on three ideas: **K**, the number of closest neighbors consulted; **Distance**, which measures how similar two feature vectors are; and **Majority Vote**, where the most common class wins. Notably, KNN is a 'lazy learner'—it simply stores training images and computes during prediction. Now I hand over to Azadur Rahman to show how KNN works step by step."
+  > "**K-Nearest Neighbors (KNN)** is a supervised machine learning algorithm built on three ideas: **K**, the number of closest neighbors consulted; **Distance**, which measures how similar two feature vectors are; and **Majority Vote**, where the most common class wins. Notably, KNN is a 'lazy learner'—it simply stores training images and computes during prediction. Now I hand over to Md. Rakib Hossain to show how KNN works step by step."
 * **Simple Explanation:** Find the K closest stored images and let them vote on the label.
 * **Analogy:** Asking your 3 nearest neighbors in a new area which neighborhood you are standing in.
 * **Transition to Slide 6 (Speaker Hand-off):**
-  > "Over to you, Azad."
+  > "Over to you, Rakib."
 
 ---
 
-## Speaker 2: Azadur Rahman (ID: 4478) — Slides 6–10 (~1m 40s)
+## Speaker 2: Md. Rakib Hossain (ID: 4056) — Slides 6–10 (~1m 40s)
 
 ### Slide 6: How KNN Classifies an Image
-* **Speaker:** Azadur Rahman (4478)
+* **Speaker:** Md. Rakib Hossain (4056)
 * **Main Objective:** Summarize the 6-step KNN classification workflow clearly.
 * **Approximate Speaking Time:** 20 seconds
 * **Exact Speaking Script:**
@@ -104,7 +104,7 @@ All three members stand together at the front. Keep `KNN Image Recognition.html`
 ---
 
 ### Slide 7: Measuring Similarity: Distance
-* **Speaker:** Azadur Rahman (4478)
+* **Speaker:** Md. Rakib Hossain (4056)
 * **Main Objective:** Present the Euclidean distance formula and briefly mention Manhattan and Cosine metrics.
 * **Approximate Speaking Time:** 20 seconds
 * **Exact Speaking Script:**
@@ -117,7 +117,7 @@ All three members stand together at the front. Keep `KNN Image Recognition.html`
 ---
 
 ### Slide 8: Real-World Example: Fruit Sorting
-* **Speaker:** Azadur Rahman (4478)
+* **Speaker:** Md. Rakib Hossain (4056)
 * **Main Objective:** Introduce the 6 labeled training fruits (A1–A3, O1–O3) and the new query fruit **Q (7, 4)**.
 * **Approximate Speaking Time:** 20 seconds
 * **Exact Speaking Script:**
@@ -130,7 +130,7 @@ All three members stand together at the front. Keep `KNN Image Recognition.html`
 ---
 
 ### Slide 9: Feature Space: Finding Neighbors
-* **Speaker:** Azadur Rahman (4478)
+* **Speaker:** Md. Rakib Hossain (4056)
 * **Main Objective:** Point out the cluster separation on the scatter plot and the `K = 3` circle around Q.
 * **Approximate Speaking Time:** 20 seconds
 * **Exact Speaking Script:**
@@ -143,26 +143,26 @@ All three members stand together at the front. Keep `KNN Image Recognition.html`
 ---
 
 ### Slide 10: Calculation and Voting
-* **Speaker:** Azadur Rahman (4478)
+* **Speaker:** Md. Rakib Hossain (4056)
 * **Main Objective:** Confirm the ranked distances and majority vote outcome for `K = 3` and `K = 5`.
 * **Approximate Speaking Time:** 20 seconds
 * **Exact Speaking Script:**
-  > "Ranking all Euclidean distances from Q (7, 4), the closest three neighbors are A3 at 2.00, and A1 and A2 at 2.24—all Apples. For **K = 3**, the vote is 3 Apples to 0 Oranges, and even for **K = 5**, Apples win 3 to 2. Thus, Q is classified as an **Apple**. Now I hand over to Rakib to discuss choosing K and real-world applications."
+  > "Ranking all Euclidean distances from Q (7, 4), the closest three neighbors are A3 at 2.00, and A1 and A2 at 2.24—all Apples. For **K = 3**, the vote is 3 Apples to 0 Oranges, and even for **K = 5**, Apples win 3 to 2. Thus, Q is classified as an **Apple**. Now I hand over to Azad to discuss choosing K and real-world applications."
 * **Simple Explanation:** The top 3 closest distances all belong to Apples, so Apple wins unanimously.
 * **Analogy:** Counting the ballots inside our circle—3 votes for Apple, 0 for Orange.
 * **Transition to Slide 11 (Speaker Hand-off):**
-  > "Over to you, Rakib."
+  > "Over to you, Azad."
 
 ---
 
-## Speaker 3: Md. Rakib Hossain (ID: 4056) — Slides 11–15 (~1m 40s)
+## Speaker 3: Azadur Rahman (ID: 4478) — Slides 11–15 (~1m 40s)
 
 ### Slide 11: Choosing the Value of K
-* **Speaker:** Md. Rakib Hossain (4056)
+* **Speaker:** Azadur Rahman (4478)
 * **Main Objective:** Explain the trade-off between small K (overfitting/noise) and large K (over-smoothing), plus scaling and odd K.
 * **Approximate Speaking Time:** 25 seconds
 * **Exact Speaking Script:**
-  > "Thank you, Azad. Choosing the right K is crucial. If K is too small—like **K = 1**—a single noisy image can cause a wrong prediction. If K is too large, distant classes blur the boundary. In practice, we pick an odd K for binary classes to prevent ties, validate on test data, and scale all features equally."
+  > "Thank you, Rakib. Choosing the right K is crucial. If K is too small—like **K = 1**—a single noisy image can cause a wrong prediction. If K is too large, distant classes blur the boundary. In practice, we pick an odd K for binary classes to prevent ties, validate on test data, and scale all features equally."
 * **Simple Explanation:** Too small K reacts to noise; too large K over-smooths; odd K prevents ties.
 * **Analogy:** Asking 1 person for directions can be risky, while asking 100 people from other towns dilutes local knowledge.
 * **Transition to Slide 12:**
@@ -171,7 +171,7 @@ All three members stand together at the front. Keep `KNN Image Recognition.html`
 ---
 
 ### Slide 12: Real-World Applications
-* **Speaker:** Md. Rakib Hossain (4056)
+* **Speaker:** Azadur Rahman (4478)
 * **Main Objective:** Highlight practical applications across digits, faces, medical scans, agriculture, and industry.
 * **Approximate Speaking Time:** 20 seconds
 * **Exact Speaking Script:**
@@ -184,7 +184,7 @@ All three members stand together at the front. Keep `KNN Image Recognition.html`
 ---
 
 ### Slide 13: Advantages and Limitations
-* **Speaker:** Md. Rakib Hossain (4056)
+* **Speaker:** Azadur Rahman (4478)
 * **Main Objective:** Balance KNN's simplicity and zero-training advantage against slow query time and high dimensionality.
 * **Approximate Speaking Time:** 25 seconds
 * **Exact Speaking Script:**
@@ -197,7 +197,7 @@ All three members stand together at the front. Keep `KNN Image Recognition.html`
 ---
 
 ### Slide 14: Conclusion
-* **Speaker:** Md. Rakib Hossain (4056)
+* **Speaker:** Azadur Rahman (4478)
 * **Main Objective:** Deliver the three crisp takeaway points summarizing the entire talk.
 * **Approximate Speaking Time:** 20 seconds
 * **Exact Speaking Script:**
@@ -210,7 +210,7 @@ All three members stand together at the front. Keep `KNN Image Recognition.html`
 ---
 
 ### Slide 15: Thank You & Q&A
-* **Speaker:** Md. Rakib Hossain (4056)
+* **Speaker:** Azadur Rahman (4478)
 * **Main Objective:** Thank the course teacher and audience politely and open the floor for questions.
 * **Approximate Speaking Time:** 10 seconds
 * **Exact Speaking Script:**
